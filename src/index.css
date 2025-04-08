@@ -1,1 +1,37 @@
 @import "tailwindcss";
+
+@layer utilities {
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+  }
+  
+  .backdrop-blur-lg {
+    backdrop-filter: blur(16px);
+  }
+}
+
+@keyframes flow {
+  0% {
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    transform: translateX(0) translateY(-50%);
+  }
+}
+
+@keyframes flow-reverse {
+  0% {
+    transform: translateX(0) translateY(-50%);
+  }
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.animate-flow {
+  animation: flow 20s linear infinite;
+}
+
+.animate-flow-reverse {
+  animation: flow-reverse 20s linear infinite;
+}
