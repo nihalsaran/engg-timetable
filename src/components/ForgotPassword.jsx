@@ -150,7 +150,7 @@ const ForgotPassword = () => {
                                   bg-gradient-to-r from-indigo-500 to-indigo-600 text-white
                                   hover:from-indigo-600 hover:to-indigo-700
                                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
-                                  transform transition-all duration-200
+                                  transform transition-all duration-200 cursor-pointer
                                   ${isLoading ? 'opacity-75 cursor-wait' : 'hover:scale-[1.02]'}`}
                       >
                         <AnimatePresence mode="wait">

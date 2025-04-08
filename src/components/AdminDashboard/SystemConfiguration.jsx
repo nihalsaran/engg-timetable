@@ -55,10 +55,10 @@ export default function SystemConfiguration() {
               <input type="number" value={slot.duration} onChange={e => {
                 const updated = [...timeSlots]; updated[idx].duration = e.target.value; setTimeSlots(updated);
               }} className="border rounded px-3 py-2 w-24" placeholder="Duration (min)" />
-              <button onClick={() => setTimeSlots(timeSlots.filter((_, i) => i !== idx))} className="px-2 py-1 bg-red-500 text-white rounded">Remove</button>
+              <button onClick={() => setTimeSlots(timeSlots.filter((_, i) => i !== idx))} className="px-2 py-1 bg-red-500 text-white rounded cursor-pointer">Remove</button>
             </div>
           ))}
-          <button onClick={() => setTimeSlots([...timeSlots, { start: '', end: '', duration: 60 }])} className="px-4 py-2 bg-green-600 text-white rounded">+ Add Slot</button>
+          <button onClick={() => setTimeSlots([...timeSlots, { start: '', end: '', duration: 60 }])} className="px-4 py-2 bg-green-600 text-white rounded cursor-pointer">+ Add Slot</button>
         </section>
 
         {/* Notification Templates */}
@@ -117,7 +117,7 @@ export default function SystemConfiguration() {
           <input placeholder="Retention Period (days)" value={audit.retention} onChange={e => setAudit({ ...audit, retention: e.target.value })} className="w-full border rounded px-3 py-2" />
         </section>
 
-        <button className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded">Save Configuration</button>
+        <button className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded cursor-pointer">Save Configuration</button>
       </div>
     </DashboardLayout>
   );

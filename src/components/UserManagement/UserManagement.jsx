@@ -80,9 +80,9 @@ export default function UserManagement() {
             <option>Inactive</option>
             <option>Locked</option>
           </select>
-          <button onClick={() => setShowModal(true)} className="ml-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded">+ Add User</button>
-          <button onClick={() => setShowImport(true)} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">Import Users</button>
-          <button onClick={() => setShowRoleModal(true)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded">Manage Roles</button>
+          <button onClick={() => setShowModal(true)} aria-label="Add User" className="ml-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded cursor-pointer">+ Add User</button>
+          <button onClick={() => setShowImport(true)} aria-label="Import Users" className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded cursor-pointer">Import Users</button>
+          <button onClick={() => setShowRoleModal(true)} aria-label="Manage Roles" className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded cursor-pointer">Manage Roles</button>
         </div>
 
         {/* User Table */}
@@ -109,10 +109,10 @@ export default function UserManagement() {
                   <td className="p-2 border">{u.status}</td>
                   <td className="p-2 border">{u.lastLogin}</td>
                   <td className="p-2 border space-x-2">
-                    <button onClick={() => { setEditUser(u); setShowModal(true); }} className="px-2 py-1 text-sm bg-green-500 text-white rounded">Edit</button>
-                    <button onClick={() => toggleStatus(u.id, u.status === 'Active' ? 'Inactive' : 'Active')} className="px-2 py-1 text-sm bg-yellow-500 text-white rounded">{u.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
-                    <button onClick={() => toggleStatus(u.id, 'Locked')} className="px-2 py-1 text-sm bg-red-500 text-white rounded">Lock</button>
-                    <button onClick={() => resetPassword(u.id)} className="px-2 py-1 text-sm bg-indigo-500 text-white rounded">Reset Password</button>
+                    <button onClick={() => { setEditUser(u); setShowModal(true); }} aria-label={`Edit user ${u.name}`} className="px-2 py-1 text-sm bg-green-500 text-white rounded cursor-pointer">Edit</button>
+                    <button onClick={() => toggleStatus(u.id, u.status === 'Active' ? 'Inactive' : 'Active')} aria-label={`${u.status === 'Active' ? 'Deactivate' : 'Activate'} user ${u.name}`} className="px-2 py-1 text-sm bg-yellow-500 text-white rounded cursor-pointer">{u.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
+                    <button onClick={() => toggleStatus(u.id, 'Locked')} aria-label={`Lock user ${u.name}`} className="px-2 py-1 text-sm bg-red-500 text-white rounded cursor-pointer">Lock</button>
+                    <button onClick={() => resetPassword(u.id)} aria-label={`Reset password for ${u.name}`} className="px-2 py-1 text-sm bg-indigo-500 text-white rounded cursor-pointer">Reset Password</button>
                   </td>
                 </tr>
               ))}
@@ -158,12 +158,12 @@ export default function UserManagement() {
                   </select>
                   <textarea name="permissions" defaultValue={editUser?.permissions?.join(', ') || ''} placeholder="Permissions (comma separated)" className="w-full border rounded px-3 py-2" />
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => alert('Generated Password: ' + generatePassword())} className="px-4 py-2 rounded bg-green-600 text-white">Generate Password</button>
-                    <button type="button" onClick={() => alert('Email notification sent!')} className="px-4 py-2 rounded bg-indigo-600 text-white">Send Email</button>
+                    <button type="button" onClick={() => alert('Generated Password: ' + generatePassword())} aria-label="Generate Password" className="px-4 py-2 rounded bg-green-600 text-white cursor-pointer">Generate Password</button>
+                    <button type="button" onClick={() => alert('Email notification sent!')} aria-label="Send Email Notification" className="px-4 py-2 rounded bg-indigo-600 text-white cursor-pointer">Send Email</button>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700">Cancel</button>
-                    <button type="submit" className="px-4 py-2 rounded bg-indigo-600 text-white">Save</button>
+                    <button type="button" onClick={() => setShowModal(false)} aria-label="Cancel" className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 cursor-pointer">Cancel</button>
+                    <button type="submit" aria-label="Save User" className="px-4 py-2 rounded bg-indigo-600 text-white cursor-pointer">Save</button>
                   </div>
                 </form>
               </motion.div>
@@ -180,8 +180,8 @@ export default function UserManagement() {
                 <p>Upload CSV or Excel file. Map fields accordingly.</p>
                 <input type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="w-full" />
                 <div className="flex justify-end gap-2">
-                  <button onClick={() => setShowImport(false)} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700">Cancel</button>
-                  <button onClick={() => { alert('Import simulated'); setShowImport(false); }} className="px-4 py-2 rounded bg-green-600 text-white">Import</button>
+                  <button onClick={() => setShowImport(false)} aria-label="Cancel Import" className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 cursor-pointer">Cancel</button>
+                  <button onClick={() => { alert('Import simulated'); setShowImport(false); }} aria-label="Confirm Import" className="px-4 py-2 rounded bg-green-600 text-white cursor-pointer">Import</button>
                 </div>
               </motion.div>
             </motion.div>
@@ -205,10 +205,10 @@ export default function UserManagement() {
                   e.target.reset();
                 }} className="flex gap-2 mt-4">
                   <input name="role" placeholder="New Role" className="flex-1 border rounded px-3 py-2" />
-                  <button type="submit" className="px-4 py-2 rounded bg-indigo-600 text-white">Add</button>
+                  <button type="submit" aria-label="Add Role" className="px-4 py-2 rounded bg-indigo-600 text-white cursor-pointer">Add</button>
                 </form>
                 <div className="flex justify-end">
-                  <button onClick={() => setShowRoleModal(false)} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700">Close</button>
+                  <button onClick={() => setShowRoleModal(false)} aria-label="Close Role Management" className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 cursor-pointer">Close</button>
                 </div>
               </motion.div>
             </motion.div>

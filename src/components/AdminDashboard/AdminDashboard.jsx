@@ -287,6 +287,7 @@ export default function AdminDashboard() {
                 <motion.button
                   key={action}
                   onClick={() => action === 'Create Announcement' && setShowAnnouncement(true)}
+                  aria-label={action}
                   className="w-full p-2 text-left rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all hover:shadow-sm"
                   variants={{
                     hidden: { opacity: 0, x: 20 },
@@ -325,6 +326,7 @@ export default function AdminDashboard() {
                     <Title>Create Announcement</Title>
                     <motion.button 
                       onClick={() => setShowAnnouncement(false)}
+                      aria-label="Close Announcement Modal"
                       className="text-gray-500 hover:text-gray-700 transition-colors"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
@@ -357,6 +359,7 @@ export default function AdminDashboard() {
                     <div className="flex justify-end space-x-2">
                       <motion.button
                         onClick={() => setShowAnnouncement(false)}
+                        aria-label="Cancel Announcement"
                         className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 transition-colors"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -364,6 +367,7 @@ export default function AdminDashboard() {
                         Cancel
                       </motion.button>
                       <motion.button 
+                        aria-label="Post Announcement"
                         className="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}

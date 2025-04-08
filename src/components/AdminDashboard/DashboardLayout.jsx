@@ -57,9 +57,10 @@ export default function DashboardLayout({ children }) {
           <span className="text-xl font-semibold text-white">Admin Panel</span>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-white hover:text-gray-200 transition-colors"
+            className="lg:hidden text-white hover:text-gray-200 transition-colors group cursor-pointer"
           >
-            <XMarkIcon className="w-6 h-6" />
+            <XMarkIcon className="w-6 h-6 group-hover:hidden" />
+            <Bars3Icon className="w-6 h-6 hidden group-hover:inline" />
           </button>
         </div>
         
@@ -86,9 +87,10 @@ export default function DashboardLayout({ children }) {
           <div className="flex items-center justify-between h-16 px-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-500 hover:text-gray-600 dark:text-gray-200 transition-colors"
+              className="lg:hidden text-gray-500 hover:text-gray-600 dark:text-gray-200 transition-colors group cursor-pointer"
             >
-              <Bars3Icon className="w-6 h-6" />
+              <Bars3Icon className="w-6 h-6 group-hover:hidden" />
+              <XMarkIcon className="w-6 h-6 hidden group-hover:inline" />
             </button>
 
             <div className="flex items-center space-x-4">

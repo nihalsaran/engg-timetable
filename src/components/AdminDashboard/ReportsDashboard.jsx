@@ -194,7 +194,7 @@ export default function ReportsDashboard() {
               </label>
             ))}
           </div>
-          <button className="px-4 py-2 bg-green-600 text-white rounded" onClick={() => alert('Generating custom report...')}>Generate Custom Report</button>
+          <button className="px-4 py-2 bg-green-600 text-white rounded cursor-pointer" onClick={() => alert('Generating custom report...')} aria-label="Generate Custom Report">Generate Custom Report</button>
         </section>
 
         {/* Scheduling Efficiency & Suggestions */}
@@ -212,10 +212,10 @@ export default function ReportsDashboard() {
           <h2 className="text-xl font-semibold">Export & Schedule Reports</h2>
           <div className="flex gap-2 flex-wrap">
             {['PDF', 'Excel', 'CSV'].map(fmt => (
-              <button key={fmt} onClick={() => exportReport(fmt)} className="px-4 py-2 bg-indigo-600 text-white rounded">Export as {fmt}</button>
+              <button key={fmt} onClick={() => exportReport(fmt)} aria-label={`Export report as ${fmt}`} className="px-4 py-2 bg-indigo-600 text-white rounded cursor-pointer">Export as {fmt}</button>
             ))}
           </div>
-          <button onClick={scheduleReport} className="px-4 py-2 bg-yellow-500 text-white rounded">Schedule Report Email</button>
+          <button onClick={scheduleReport} aria-label="Schedule Report Email" className="px-4 py-2 bg-yellow-500 text-white rounded cursor-pointer">Schedule Report Email</button>
         </section>
       </div>
     </DashboardLayout>

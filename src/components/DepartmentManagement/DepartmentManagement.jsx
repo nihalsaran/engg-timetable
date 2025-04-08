@@ -85,12 +85,12 @@ export default function DepartmentManagement() {
             <option value="30">30+</option>
             <option value="40">40+</option>
           </select>
-          <button onClick={openAddModal} className="ml-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded transition">+ Add Department</button>
+          <button onClick={openAddModal} aria-label="Add Department" className="ml-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded transition cursor-pointer">+ Add Department</button>
           {selectedIds.length > 0 && (
             <div className="flex gap-2">
-              <button onClick={() => setConfirmAction({ type: 'activate' })} className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded">Activate</button>
-              <button onClick={() => setConfirmAction({ type: 'deactivate' })} className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded">Deactivate</button>
-              <button onClick={() => setConfirmAction({ type: 'delete' })} className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded">Delete</button>
+              <button onClick={() => setConfirmAction({ type: 'activate' })} aria-label="Activate Selected Departments" className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded cursor-pointer">Activate</button>
+              <button onClick={() => setConfirmAction({ type: 'deactivate' })} aria-label="Deactivate Selected Departments" className="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded cursor-pointer">Deactivate</button>
+              <button onClick={() => setConfirmAction({ type: 'delete' })} aria-label="Delete Selected Departments" className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded cursor-pointer">Delete</button>
             </div>
           )}
         </div>
@@ -119,9 +119,9 @@ export default function DepartmentManagement() {
                   <td className="p-2 border">{dep.status}</td>
                   <td className="p-2 border">{dep.size}</td>
                   <td className="p-2 border space-x-2">
-                    <button onClick={() => openEditModal(dep)} className="px-2 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600">Edit</button>
-                    <button onClick={() => setConfirmAction({ type: dep.status === 'Active' ? 'deactivateOne' : 'activateOne', id: dep.id })} className="px-2 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600">{dep.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
-                    <button onClick={() => setConfirmAction({ type: 'deleteOne', id: dep.id })} className="px-2 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+                    <button onClick={() => openEditModal(dep)} aria-label={`Edit Department ${dep.name}`} className="px-2 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 cursor-pointer">Edit</button>
+                    <button onClick={() => setConfirmAction({ type: dep.status === 'Active' ? 'deactivateOne' : 'activateOne', id: dep.id })} aria-label={`${dep.status === 'Active' ? 'Deactivate' : 'Activate'} Department ${dep.name}`} className="px-2 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600 cursor-pointer">{dep.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
+                    <button onClick={() => setConfirmAction({ type: 'deleteOne', id: dep.id })} aria-label={`Delete Department ${dep.name}`} className="px-2 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 cursor-pointer">Delete</button>
                   </td>
                 </tr>
               ))}
@@ -167,8 +167,8 @@ export default function DepartmentManagement() {
                 <td className="p-2 border">12</td>
                 <td className="p-2 border">Yes</td>
                 <td className="p-2 border space-x-2">
-                  <button className="px-2 py-1 text-sm bg-green-500 text-white rounded">Edit</button>
-                  <button className="px-2 py-1 text-sm bg-red-500 text-white rounded">Remove</button>
+                  <button className="px-2 py-1 text-sm bg-green-500 text-white rounded cursor-pointer">Edit</button>
+                  <button className="px-2 py-1 text-sm bg-red-500 text-white rounded cursor-pointer">Remove</button>
                 </td>
               </tr>
               <tr>
@@ -177,13 +177,13 @@ export default function DepartmentManagement() {
                 <td className="p-2 border">10</td>
                 <td className="p-2 border">No</td>
                 <td className="p-2 border space-x-2">
-                  <button className="px-2 py-1 text-sm bg-green-500 text-white rounded">Edit</button>
-                  <button className="px-2 py-1 text-sm bg-red-500 text-white rounded">Remove</button>
+                  <button className="px-2 py-1 text-sm bg-green-500 text-white rounded cursor-pointer">Edit</button>
+                  <button className="px-2 py-1 text-sm bg-red-500 text-white rounded cursor-pointer">Remove</button>
                 </td>
               </tr>
             </tbody>
           </table>
-          <button className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">+ Assign Faculty</button>
+          <button className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 cursor-pointer" aria-label="Assign Faculty">+ Assign Faculty</button>
         </div>
 
         {/* Timetable Settings */}
@@ -213,7 +213,7 @@ export default function DepartmentManagement() {
                 <option>Saturday</option>
               </select>
             </div>
-            <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Save Settings</button>
+            <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer">Save Settings</button>
           </form>
         </div>
       </div>
@@ -238,8 +238,8 @@ export default function DepartmentManagement() {
                 <input name="contact" defaultValue={editDept?.contact || ''} placeholder="Contact Email" className="w-full border rounded px-3 py-2" />
                 <input name="size" type="number" defaultValue={editDept?.size || ''} placeholder="Size" className="w-full border rounded px-3 py-2" />
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700">Cancel</button>
-                  <button type="submit" className="px-4 py-2 rounded bg-indigo-600 text-white">Save</button>
+                  <button type="button" onClick={() => setShowModal(false)} aria-label="Cancel" className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 cursor-pointer">Cancel</button>
+                  <button type="submit" aria-label="Save Department" className="px-4 py-2 rounded bg-indigo-600 text-white cursor-pointer">Save</button>
                 </div>
               </form>
               {editDept && editDept.history?.length > 0 && (
@@ -265,7 +265,7 @@ export default function DepartmentManagement() {
               <h2 className="text-lg font-semibold">Confirm Action</h2>
               <p>Are you sure you want to {confirmAction.type.includes('activate') ? 'activate' : confirmAction.type.includes('deactivate') ? 'deactivate' : 'delete'} {confirmAction.id ? 'this department' : 'selected departments'}?</p>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setConfirmAction(null)} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700">Cancel</button>
+                <button onClick={() => setConfirmAction(null)} aria-label="Cancel Action" className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 cursor-pointer">Cancel</button>
                 <button onClick={() => {
                   if (confirmAction.type === 'activate') batchUpdateStatus('Active');
                   else if (confirmAction.type === 'deactivate') batchUpdateStatus('Inactive');
@@ -274,7 +274,7 @@ export default function DepartmentManagement() {
                   else if (confirmAction.type === 'deactivateOne') setDepartments(prev => prev.map(d => d.id === confirmAction.id ? { ...d, status: 'Inactive' } : d));
                   else if (confirmAction.type === 'deleteOne') setDepartments(prev => prev.filter(d => d.id !== confirmAction.id));
                   setConfirmAction(null);
-                }} className="px-4 py-2 rounded bg-red-600 text-white">Confirm</button>
+                }} aria-label="Confirm Action" className="px-4 py-2 rounded bg-red-600 text-white cursor-pointer">Confirm</button>
               </div>
             </motion.div>
           </motion.div>

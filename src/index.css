@@ -119,3 +119,14 @@
   outline: 2px solid theme('colors.indigo.500');
   outline-offset: 2px;
 }
+
+button:focus-visible {
+  outline: 3px solid #6366f1; /* Indigo-500 */
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3); /* subtle glow */
+  border-radius: 0.375rem; /* match rounded */
+}
+
+button:hover {
+  cursor: pointer;
+}
