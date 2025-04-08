@@ -15,7 +15,7 @@ import {
 const navigation = [
   { name: 'Department Management', href: '/departments', icon: BuildingOfficeIcon },
   { name: 'User Management', href: '/user-management', icon: UserGroupIcon },
-  { name: 'System Configuration', href: '#', icon: Cog6ToothIcon },
+  { name: 'System Configuration', href: '/system-configuration', icon: Cog6ToothIcon },
   { name: 'Master Reports', href: '#', icon: DocumentChartBarIcon },
 ];
 
