@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-  { name: 'Department Management', href: '#', icon: BuildingOfficeIcon },
+  { name: 'Department Management', href: '/departments', icon: BuildingOfficeIcon },
   { name: 'User Management', href: '#', icon: UserGroupIcon },
   { name: 'System Configuration', href: '#', icon: Cog6ToothIcon },
   { name: 'Master Reports', href: '#', icon: DocumentChartBarIcon },
