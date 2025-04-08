@@ -6,6 +6,7 @@ import AdminDashboard from './components/AdminDashboard/AdminDashboard'
 import DepartmentManagement from './components/DepartmentManagement/DepartmentManagement'
 import HODDashboard from './components/AdminDashboard/HODDashboard'
 import DepartmentTimetableOverview from './components/AdminDashboard/DepartmentTimetableOverview'
+import FacultyWorkloadManagement from './components/AdminDashboard/FacultyWorkloadManagement'
 
 const UserManagement = lazy(() => import('./components/UserManagement/UserManagement.jsx'))
 const SystemConfiguration = lazy(() => import('./components/AdminDashboard/SystemConfiguration.jsx'))
@@ -34,6 +35,7 @@ function App() {
           </div>}><SystemConfiguration /></Suspense>} />
           <Route path="/reports" element={<ReportsDashboard />} />
           <Route path="/department-timetable" element={<DepartmentTimetableOverview />} />
+          <Route path="/faculty-workload" element={<FacultyWorkloadManagement />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
