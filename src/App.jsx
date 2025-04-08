@@ -4,6 +4,8 @@ import Login from './components/Login'
 import ForgotPassword from './components/ForgotPassword'
 import AdminDashboard from './components/AdminDashboard/AdminDashboard'
 import DepartmentManagement from './components/DepartmentManagement/DepartmentManagement'
+import HODDashboard from './components/AdminDashboard/HODDashboard'
+import DepartmentTimetableOverview from './components/AdminDashboard/DepartmentTimetableOverview'
 
 const UserManagement = lazy(() => import('./components/UserManagement/UserManagement.jsx'))
 const SystemConfiguration = lazy(() => import('./components/AdminDashboard/SystemConfiguration.jsx'))
@@ -21,7 +23,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route path="/hod-dashboard" element={<div className="p-8">HOD Dashboard (Coming Soon)</div>} />
+          <Route path="/hod-dashboard" element={<HODDashboard />} />
           <Route path="/incharge-dashboard" element={<div className="p-8">Timetable Incharge Dashboard (Coming Soon)</div>} />
           <Route path="/departments" element={<DepartmentManagement />} />
           <Route path="/user-management" element={<UserManagement />} />
@@ -31,6 +33,7 @@ function App() {
             <div className="h-64 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
           </div>}><SystemConfiguration /></Suspense>} />
           <Route path="/reports" element={<ReportsDashboard />} />
+          <Route path="/department-timetable" element={<DepartmentTimetableOverview />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
