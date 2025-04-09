@@ -8,6 +8,7 @@ import DepartmentManagement from './components/DepartmentManagement'
 import RoomManagement from './components/RoomManagement'
 import ReportsAnalytics from './components/ReportsAnalytics'
 import SettingsSemester from './components/SettingsSemester'
+import HODDashboard from './components/HODDashboard'
 
 function App() {
   return (
@@ -17,6 +18,8 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route path="/" element={<Navigate to="/login" replace />} />
+
+          <Route path="/hod-dashboard" element={<HODDashboard />} />
 
           <Route path="/" element={<SuperAdminLayout />}>
             <Route path="admin-dashboard" element={<SuperAdminDashboard />} />
