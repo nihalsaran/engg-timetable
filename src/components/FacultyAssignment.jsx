@@ -299,7 +299,12 @@ export default function FacultyAssignment() {
   }, [searchTerm, faculty]);
 
   const handleSelectCourse = (course) => {
-    setSelectedCourse(course);
+    // If the course is already selected, deselect it by setting selectedCourse to null
+    if (selectedCourse && selectedCourse.id === course.id) {
+      setSelectedCourse(null);
+    } else {
+      setSelectedCourse(course);
+    }
   };
 
   const handleAssignFaculty = (facultyId) => {
@@ -430,7 +435,17 @@ export default function FacultyAssignment() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left Column: Courses */}
         <div>
-          <h2 className="text-lg font-medium text-gray-700 mb-4">Courses</h2>
+          <h2 className="text-lg font-medium text-gray-700 mb-4">
+            Courses 
+            {selectedCourse && (
+              <button
+                onClick={() => setSelectedCourse(null)}
+                className="ml-3 text-sm text-blue-600 hover:text-blue-800 font-normal"
+              >
+                (Clear selection)
+              </button>
+            )}
+          </h2>
           <div className="grid grid-cols-1 gap-4">
             {courses.map(course => {
               const assignedFaculty = faculty.find(f => f.id === course.faculty);
@@ -449,7 +464,14 @@ export default function FacultyAssignment() {
         
         {/* Right Column: Faculty */}
         <div>
-          <h2 className="text-lg font-medium text-gray-700 mb-4">Faculty</h2>
+          <h2 className="text-lg font-medium text-gray-700 mb-4">
+            Faculty
+            {selectedCourse && (
+              <span className="ml-3 text-sm text-gray-500 font-normal">
+                Assigning for: {selectedCourse.code}
+              </span>
+            )}
+          </h2>
           
           <div className="flex items-center mb-3 gap-6">
             <div className="flex items-center gap-1">
