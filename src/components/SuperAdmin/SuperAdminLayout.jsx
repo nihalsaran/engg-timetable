@@ -1,10 +1,11 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { FiMenu, FiBell, FiSearch, FiUser, FiUsers, FiGrid, FiLayers, FiHome, FiFileText, FiSettings } from 'react-icons/fi';
+import { FiMenu, FiBell, FiSearch, FiUser, FiUsers, FiGrid, FiLayers, FiHome, FiFileText, FiSettings, FiBookOpen } from 'react-icons/fi';
 
 const navItems = [
   { label: 'Dashboard', icon: <FiGrid />, path: '/admin-dashboard' },
   { label: 'Users', icon: <FiUsers />, path: '/users' },
+  { label: 'Teachers', icon: <FiBookOpen />, path: '/teachers' },
   { label: 'Departments', icon: <FiLayers />, path: '/departments' },
   { label: 'Rooms', icon: <FiHome />, path: '/admin-rooms' },
   { label: 'Reports', icon: <FiFileText />, path: '/superadmin-reports' },

@@ -3,6 +3,7 @@ import Login from './components/Login'
 import ForgotPassword from './components/ForgotPassword'
 import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard'
 import UserManagement from './components/SuperAdmin/UserManagement'
+import TeacherManagement from './components/SuperAdmin/TeacherManagement'
 import SuperAdminLayout from './components/SuperAdmin/SuperAdminLayout'
 import DepartmentManagement from './components/SuperAdmin/DepartmentManagement'
 import RoomManagement from './components/SuperAdmin/RoomManagement'
@@ -49,6 +50,7 @@ function App() {
         <Route path="/" element={<SuperAdminLayout />}>
           <Route path="/admin-dashboard" element={<SuperAdminDashboard />} />
           <Route path="/users" element={<UserManagement />} />
+          <Route path="/teachers" element={<TeacherManagement />} />
           <Route path="/departments" element={<DepartmentManagement />} />
           <Route path="/admin-rooms" element={<RoomManagement />} />
           <Route path="/superadmin-reports" element={<ReportsAnalytics />} />
