@@ -429,33 +429,33 @@ export default function TimetableBuilder() {
       {/* Main Content Area */}
       <div className="flex gap-6">
         {/* Left Panel: Course Blocks */}
-        <div className="w-1/4 bg-white rounded-2xl shadow-md p-4 overflow-y-auto max-h-[calc(100vh-250px)]">
-          <h2 className="text-lg font-semibold text-gray-700 mb-4">Course Blocks</h2>
-          <div className="space-y-3">
+        <div className="w-1/8 bg-white rounded-2xl shadow-md p-3 overflow-y-auto max-h-[calc(100vh-250px)]">
+          <h2 className="text-md font-semibold text-gray-700 mb-3">Course Blocks</h2>
+          <div className="space-y-2">
             {filteredCourses.map((course) => (
               <motion.div
                 key={course.id}
-                className={`p-3 rounded-lg border ${getCourseColorClass(course)} cursor-grab hover:shadow-md transition`}
+                className={`p-2 rounded-lg border ${getCourseColorClass(course)} cursor-grab hover:shadow-md transition`}
                 draggable
                 onDragStart={() => handleDragStart(course)}
                 whileHover={{ scale: 1.02 }}
               >
                 <div className="flex justify-between items-start">
-                  <span className="font-semibold">{course.id}</span>
-                  <span className="text-xs px-2 py-1 rounded-full bg-white/50">
+                  <span className="font-semibold text-sm">{course.id}</span>
+                  <span className="text-xs px-1 py-0.5 rounded-full bg-white/50">
                     {course.duration}h
                   </span>
                 </div>
-                <h3 className="text-sm mt-1 font-medium line-clamp-2">{course.name}</h3>
-                <div className="text-xs mt-2 flex justify-between items-center">
-                  <span>{course.faculty.name}</span>
-                  <span className="font-mono">{course.weeklyHours}</span>
+                <h3 className="text-xs mt-0.5 font-medium line-clamp-1">{course.name}</h3>
+                <div className="text-xs mt-1 flex justify-between items-center">
+                  <span className="truncate text-xs" title={course.faculty.name}>{course.faculty.name}</span>
+                  <span className="font-mono text-xs">{course.weeklyHours}</span>
                 </div>
               </motion.div>
             ))}
             
             {filteredCourses.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-6 text-gray-500 text-sm">
                 No courses match the current filters
               </div>
             )}
@@ -555,24 +555,24 @@ export default function TimetableBuilder() {
                           >
                             {courseInSlot ? (
                               <div 
-                                className={`p-2 rounded-lg ${getCourseColorClass(courseInSlot)} border cursor-pointer relative 
+                                className={`p-2 rounded-lg ${getCourseColorClass(courseInSlot)} border cursor-pointer relative max-w-[120px] mx-auto
                                           ${hasConflict ? 'ring-2 ring-red-500 animate-pulse' : ''}`}
                               >
                                 <div className="flex justify-between items-start">
-                                  <span className="font-semibold">{courseInSlot.id}</span>
+                                  <span className="font-semibold text-xs">{courseInSlot.id}</span>
                                   {hasConflict && (
-                                    <FiAlertTriangle className="text-red-500" />
+                                    <FiAlertTriangle className="text-red-500 text-xs" />
                                   )}
                                 </div>
-                                <h3 className="text-xs mt-1 font-medium line-clamp-1">{courseInSlot.name}</h3>
+                                <h3 className="text-xs mt-0.5 font-medium line-clamp-1">{courseInSlot.name}</h3>
                                 <div className="text-xs mt-1">{courseInSlot.room}</div>
                               </div>
                             ) : (
                               <div 
-                                className="h-16 w-full border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center"
+                                className="h-16 w-full max-w-[120px] mx-auto border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center"
                               >
                                 {isDragging && (
-                                  <div className="text-sm text-gray-400">Drop here</div>
+                                  <div className="text-xs text-gray-400">Drop here</div>
                                 )}
                               </div>
                             )}
@@ -595,24 +595,24 @@ export default function TimetableBuilder() {
                           >
                             {courseInSlot ? (
                               <div 
-                                className={`p-3 rounded-lg ${getCourseColorClass(courseInSlot)} border cursor-pointer relative
+                                className={`p-3 rounded-lg ${getCourseColorClass(courseInSlot)} border cursor-pointer relative max-w-[320px] mx-auto
                                           ${hasConflict ? 'ring-2 ring-red-500 animate-pulse' : ''}`}
                               >
                                 <div className="flex justify-between items-start">
-                                  <span className="font-semibold">{courseInSlot.id}</span>
+                                  <span className="font-semibold text-sm">{courseInSlot.id}</span>
                                   {hasConflict && (
                                     <FiAlertTriangle className="text-red-500" />
                                   )}
                                 </div>
-                                <h3 className="text-sm mt-1 font-medium">{courseInSlot.name}</h3>
+                                <h3 className="text-sm mt-1 font-medium line-clamp-1">{courseInSlot.name}</h3>
                                 <div className="flex justify-between mt-2 text-xs">
-                                  <span>{courseInSlot.faculty.name}</span>
+                                  <span className="truncate">{courseInSlot.faculty.name}</span>
                                   <span>Room: {courseInSlot.room}</span>
                                 </div>
                               </div>
                             ) : (
                               <div 
-                                className="h-20 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center"
+                                className="h-20 max-w-[320px] mx-auto border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center"
                               >
                                 {isDragging && (
                                   <div className="text-sm text-gray-400">Drop here</div>
@@ -631,7 +631,7 @@ export default function TimetableBuilder() {
         </div>
         
         {/* Right Panel: Faculty & Room Status */}
-        <div className="w-1/4 bg-white rounded-2xl shadow-md p-4 overflow-y-auto max-h-[calc(100vh-250px)]">
+        <div className="w-1/7 bg-white rounded-2xl shadow-md p-4 overflow-y-auto max-h-[calc(100vh-250px)]">
           <div>
             <h2 className="text-lg font-semibold text-gray-700 mb-4">Room Selection</h2>
             <div className="relative">
