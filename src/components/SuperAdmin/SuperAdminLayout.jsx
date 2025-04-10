@@ -5,7 +5,7 @@ import { FiMenu, FiBell, FiSearch, FiUser, FiUsers, FiGrid, FiLayers, FiHome, Fi
 const navItems = [
   { label: 'Dashboard', icon: <FiGrid />, path: '/admin-dashboard' },
   { label: 'Users', icon: <FiUsers />, path: '/users' },
-  { label: 'Teachers', icon: <FiBookOpen />, path: '/teachers' },
+  { label: 'Faculty', icon: <FiBookOpen />, path: '/faculty' },
   { label: 'Departments', icon: <FiLayers />, path: '/departments' },
   { label: 'Rooms', icon: <FiHome />, path: '/admin-rooms' },
   { label: 'Reports', icon: <FiFileText />, path: '/superadmin-reports' },

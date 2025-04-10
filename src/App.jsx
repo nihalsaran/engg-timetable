@@ -33,7 +33,7 @@ function App() {
         <Route element={<HODLayout />}>
           <Route path="/hod-dashboard" element={<HODDashboard />} />
           <Route path="/courses" element={<CourseManagement />} />
-          <Route path="/faculty" element={<FacultyAssignment />} />
+          <Route path="/assign-faculty" element={<FacultyAssignment />} />
           <Route path="/hod-reports" element={<FacultyLoadReports/>} />
           <Route path="/timetable" element={<TimetableViewer />} />
         </Route>
@@ -50,7 +50,7 @@ function App() {
         <Route path="/" element={<SuperAdminLayout />}>
           <Route path="/admin-dashboard" element={<SuperAdminDashboard />} />
           <Route path="/users" element={<UserManagement />} />
-          <Route path="/teachers" element={<TeacherManagement />} />
+          <Route path="/faculty" element={<TeacherManagement />} />
           <Route path="/departments" element={<DepartmentManagement />} />
           <Route path="/admin-rooms" element={<RoomManagement />} />
           <Route path="/superadmin-reports" element={<ReportsAnalytics />} />

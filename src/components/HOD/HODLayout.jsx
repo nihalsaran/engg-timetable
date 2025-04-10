@@ -49,7 +49,7 @@ export default function HODLayout() {
   const sidebarItems = [
     { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/hod-dashboard' },
     { label: 'Courses', icon: <FiBook size={18} />, path: '/courses' },
-    { label: 'Faculty', icon: <FiUsers size={18} />, path: '/faculty' },
+    { label: 'Assign-Course', icon: <FiUsers size={18} />, path: '/assign-faculty' },
     { label: 'Reports', icon: <FiFileText size={18} />, path: '/hod-reports' },
     { label: 'Timetable', icon: <FiCalendar size={18} />, path: '/timetable' },
   ];
