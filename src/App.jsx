@@ -14,6 +14,9 @@ import HODLayout from './components/HOD/HODLayout'
 import FacultyAssignment from './components/HOD/FacultyAssignment'
 import TimetableViewer from './components/HOD/TimetableViewer'
 import FacultyLoadReports from './components/HOD/FacultyLoadReports'
+// Import TT Incharge components
+import TTInchargeLayout from './components/TTIncharge/TTInchargeLayout'
+import TTInchargeDashboard from './components/TTIncharge/TTInchargeDashboard'
 
 function App() {
   return (
@@ -30,6 +33,15 @@ function App() {
           <Route path="/faculty" element={<FacultyAssignment />} />
           <Route path="/hod-reports" element={<FacultyLoadReports/>} />
           <Route path="/timetable" element={<TimetableViewer />} />
+        </Route>
+
+        {/* TT Incharge Routes */}
+        <Route element={<TTInchargeLayout />}>
+          <Route path="/tt-dashboard" element={<TTInchargeDashboard />} />
+          <Route path="/timetable-builder" element={<div>Time Table Builder</div>} />
+          <Route path="/conflicts" element={<div> Conflicts </div>} />
+          <Route path="/rooms" element={<div>Rooms</div>} />
+          <Route path="/faculty-view" element={<div>Faculty View</div>} />
         </Route>
 
         <Route path="/" element={<SuperAdminLayout />}>
