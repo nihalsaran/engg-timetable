@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampusIllustration from './CampusIllustration';
+import authService from '../appwrite/auth';
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const navigate = useNavigate();
 
   const formik = useFormik({
@@ -23,12 +25,44 @@ const Login = () => {
     }),
     onSubmit: async (values) => {
       setIsLoading(true);
+      setLoginError('');
+      
       try {
-        console.log('Login values:', values);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        navigate('/admin-dashboard');
+        const response = await authService.login(values.email, values.password);
+        
+        if (response.success) {
+          // Check user role and navigate to appropriate dashboard
+          const currentUser = await authService.getCurrentUser();
+          if (currentUser.success) {
+            // Navigate based on user role - this would come from your user's appwrite document
+            // For now, let's assume all users are admins
+            navigate('/admin-dashboard');
+            
+            // In a real app, you would do something like:
+            /*
+            switch (currentUser.user.role) {
+              case 'admin':
+                navigate('/admin-dashboard');
+                break;
+              case 'hod':
+                navigate('/hod-dashboard');
+                break;
+              case 'ttincharge':
+                navigate('/tt-dashboard');
+                break;
+              default:
+                navigate('/login');
+            }
+            */
+          } else {
+            navigate('/admin-dashboard');
+          }
+        } else {
+          setLoginError('Failed to login. Please check your credentials.');
+        }
       } catch (error) {
         console.error('Login failed:', error);
+        setLoginError('Authentication failed. Please check your credentials.');
       } finally {
         setIsLoading(false);
       }
@@ -73,6 +107,16 @@ const Login = () => {
                   University Timetable System
                 </h2>
               </motion.div>
+
+              {loginError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 p-3 bg-red-500/30 border border-red-500/50 rounded-lg text-white text-sm"
+                >
+                  {loginError}
+                </motion.div>
+              )}
 
               <form className="space-y-6" onSubmit={formik.handleSubmit}>
                 <motion.div
