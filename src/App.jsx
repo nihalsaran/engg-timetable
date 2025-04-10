@@ -18,6 +18,7 @@ import FacultyLoadReports from './components/HOD/FacultyLoadReports'
 import TTInchargeLayout from './components/TTIncharge/TTInchargeLayout'
 import TTInchargeDashboard from './components/TTIncharge/TTInchargeDashboard'
 import TimetableBuilder from './components/TTIncharge/TimetableBuilder'
+import Conflicts from './components/TTIncharge/Conflicts'
 
 function App() {
   return (
@@ -40,7 +41,7 @@ function App() {
         <Route element={<TTInchargeLayout />}>
           <Route path="/tt-dashboard" element={<TTInchargeDashboard />} />
           <Route path="/timetable-builder" element={<TimetableBuilder/> } />
-          <Route path="/conflicts" element={<div> Conflicts </div>} />
+          <Route path="/conflicts" element={<Conflicts />} />
           <Route path="/rooms" element={<div>Rooms</div>} />
           <Route path="/faculty-view" element={<div>Faculty View</div>} />
         </Route>
