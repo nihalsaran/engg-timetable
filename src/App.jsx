@@ -11,6 +11,7 @@ import SettingsSemester from './components/SettingsSemester'
 import HODDashboard from './components/HODDashboard'
 import CourseManagement from './components/CourseManagement'
 import HODLayout from './components/HODLayout'
+import FacultyAssignment from './components/FacultyAssignment'
 
 function App() {
   return (
@@ -24,7 +25,7 @@ function App() {
         <Route element={<HODLayout />}>
           <Route path="/hod-dashboard" element={<HODDashboard />} />
           <Route path="/courses" element={<CourseManagement />} />
-          <Route path="/faculty" element={<div>Faculty Management</div>} />
+          <Route path="/faculty" element={<FacultyAssignment />} />
           <Route path="/reports" element={<div>Reports</div>} />
           <Route path="/timetable" element={<div>Timetable</div>} />
         </Route>
