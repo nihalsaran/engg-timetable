@@ -26,7 +26,7 @@ function App() {
           <Route path="/hod-dashboard" element={<HODDashboard />} />
           <Route path="/courses" element={<CourseManagement />} />
           <Route path="/faculty" element={<FacultyAssignment />} />
-          <Route path="/reports" element={<div>Reports</div>} />
+          <Route path="/hod-reports" element={<div>Reports</div>} />
           <Route path="/timetable" element={<div>Timetable</div>} />
         </Route>
 
@@ -35,7 +35,7 @@ function App() {
           <Route path="users" element={<UserManagement />} />
           <Route path="departments" element={<DepartmentManagement />} />
           <Route path="rooms" element={<RoomManagement />} />
-          <Route path="reports" element={<ReportsAnalytics />} />
+          <Route path="superadmin-reports" element={<ReportsAnalytics />} />
           <Route path="settings" element={<SettingsSemester />} />
         </Route>
       </Routes>

@@ -7,7 +7,7 @@ const navItems = [
   { label: 'Users', icon: <FiUsers />, path: '/users' },
   { label: 'Departments', icon: <FiLayers />, path: '/departments' },
   { label: 'Rooms', icon: <FiHome />, path: '/rooms' },
-  { label: 'Reports', icon: <FiFileText />, path: '/reports' },
+  { label: 'Reports', icon: <FiFileText />, path: '/superadmin-reports' },
   { label: 'Settings', icon: <FiSettings />, path: '/settings' },
 ];
 
