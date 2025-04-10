@@ -8,10 +8,10 @@ import DepartmentManagement from './components/SuperAdmin/DepartmentManagement'
 import RoomManagement from './components/SuperAdmin/RoomManagement'
 import ReportsAnalytics from './components/SuperAdmin/ReportsAnalytics'
 import SettingsSemester from './components/SuperAdmin/SettingsSemester'
-import HODDashboard from './components/HODDashboard'
-import CourseManagement from './components/CourseManagement'
-import HODLayout from './components/HODLayout'
-import FacultyAssignment from './components/FacultyAssignment'
+import HODDashboard from './components/HOD/HODDashboard'
+import CourseManagement from './components/HOD/CourseManagement'
+import HODLayout from './components/HOD/HODLayout'
+import FacultyAssignment from './components/HOD/FacultyAssignment'
 
 function App() {
   return (
