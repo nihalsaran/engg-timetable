@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiUser, FiBookOpen, FiAward, FiLayers } from 'react-icons/fi';
+import { useState, useEffect, useRef } from 'react';
+import { FiPlus, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiUser, FiBookOpen, FiAward, FiLayers, FiUpload, FiInfo, FiDownload } from 'react-icons/fi';
 import authService from '../../appwrite/auth';
 import facultyService from '../../appwrite/database/facultyService';
 
@@ -54,12 +54,32 @@ export default function TeacherManagement() {
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false);
+  const fileInputRef = useRef(null);
+  const tooltipRef = useRef(null);
 
   // Function to fetch all teachers on component mount
   useEffect(() => {
     // Uncomment when ready to integrate with backend
     // fetchTeachers();
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target)) {
+        setShowInfoTooltip(false);
+      }
+    };
+
+    // Add event listener only when tooltip is shown
+    if (showInfoTooltip) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showInfoTooltip]);
 
   const fetchTeachers = async () => {
     try {
@@ -253,6 +273,175 @@ export default function TeacherManagement() {
     return colors[hash % colors.length];
   };
 
+  // Trigger the hidden file input
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle file upload and JSON parsing
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const jsonData = JSON.parse(event.target.result);
+          
+          // Validate the JSON structure
+          if (!Array.isArray(jsonData)) {
+            throw new Error('Invalid JSON format. Expected an array of faculty members.');
+          }
+          
+          // Process each faculty member in the dataset
+          const results = [];
+          for (const faculty of jsonData) {
+            // Basic validation
+            if (!faculty.name || !faculty.email || !faculty.department) {
+              results.push({
+                name: faculty.name || 'Unknown',
+                success: false,
+                error: 'Missing required fields (name, email, or department)'
+              });
+              continue;
+            }
+            
+            try {
+              // Create user account
+              const userResult = await authService.createAccount(
+                faculty.email, 
+                faculty.password || 'defaultPassword123', // You might want to handle this differently
+                faculty.name
+              );
+              
+              if (!userResult.success) {
+                results.push({
+                  name: faculty.name,
+                  success: false,
+                  error: 'Failed to create user account'
+                });
+                continue;
+              }
+              
+              // Create faculty profile
+              const teacherData = {
+                userId: userResult.user.$id,
+                name: faculty.name,
+                email: faculty.email,
+                department: faculty.department,
+                expertise: faculty.expertise || [],
+                qualification: faculty.qualification || '',
+                experience: parseInt(faculty.experience || 0),
+                active: faculty.active !== undefined ? faculty.active : true,
+                role: 'Faculty',
+                maxHours: faculty.maxHours || 40,
+                status: 'available'
+              };
+              
+              const facultyResult = await facultyService.createFaculty(teacherData);
+              
+              if (facultyResult.success) {
+                results.push({
+                  name: faculty.name,
+                  success: true
+                });
+              } else {
+                results.push({
+                  name: faculty.name,
+                  success: false,
+                  error: 'Failed to create faculty profile'
+                });
+              }
+              
+            } catch (err) {
+              results.push({
+                name: faculty.name,
+                success: false,
+                error: err.message
+              });
+            }
+          }
+          
+          // Show results summary
+          const successful = results.filter(r => r.success).length;
+          if (successful === results.length) {
+            alert(`Successfully imported ${successful} faculty members.`);
+          } else {
+            alert(`Imported ${successful} out of ${results.length} faculty members. Check console for details.`);
+            console.table(results);
+          }
+          
+          // Refresh the teachers list
+          fetchTeachers();
+          
+        } catch (err) {
+          setError(`Error parsing JSON: ${err.message}`);
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        setError('Error reading the file');
+        setIsLoading(false);
+      };
+      
+      reader.readAsText(file);
+      
+    } catch (err) {
+      setError(err.message || 'An error occurred during file upload');
+      setIsLoading(false);
+    }
+    
+    // Reset the file input
+    e.target.value = '';
+  };
+
+  // Download example JSON dataset
+  const downloadExampleJSON = () => {
+    const exampleData = [
+      {
+        "name": "Dr. John Doe",
+        "email": "john.doe@university.edu",
+        "password": "securePassword123",
+        "department": "Computer Science",
+        "expertise": ["Algorithms & Data Structures", "Artificial Intelligence"],
+        "qualification": "Ph.D Computer Science",
+        "experience": 10,
+        "active": true,
+        "maxHours": 40
+      },
+      {
+        "name": "Dr. Jane Smith",
+        "email": "jane.smith@university.edu",
+        "password": "securePassword456",
+        "department": "Electrical Engineering",
+        "expertise": ["Computer Networks", "Embedded Systems"],
+        "qualification": "Ph.D Electrical Engineering",
+        "experience": 8,
+        "active": true,
+        "maxHours": 35
+      }
+    ];
+    
+    const blob = new Blob([JSON.stringify(exampleData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'faculty_dataset_example.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-6 relative">
       <h1 className="text-2xl font-bold mb-6">Faculty Management</h1>
@@ -342,14 +531,68 @@ export default function TeacherManagement() {
         </table>
       </div>
 
-      {/* Floating Add Button */}
-      <button
-        onClick={() => openModal()}
-        className="fixed bottom-8 right-8 p-4 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 transition flex items-center"
-      >
-        <FiPlus size={24} className="mr-1" />
-        <span>Add New Teacher</span>
-      </button>
+      {/* Floating Buttons Group */}
+      <div className="fixed bottom-8 right-8 flex flex-col gap-4">
+        {/* Upload Faculty Dataset Button with Info Icon */}
+        <div className="flex items-center relative group">
+          <button
+            onClick={handleUploadClick}
+            className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-600 text-white shadow-lg hover:scale-105 transition flex items-center"
+          >
+            <FiUpload size={20} className="mr-2" />
+            <span>Upload Faculty Dataset</span>
+          </button>
+          
+          {/* Info Icon with Tooltip */}
+          <div 
+            className="relative ml-2"
+            ref={tooltipRef}
+            onClick={() => setShowInfoTooltip(!showInfoTooltip)}
+          >
+            <button
+              className="w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100"
+            >
+              <FiInfo size={16} className="text-blue-600" />
+            </button>
+            
+            {/* Tooltip */}
+            {showInfoTooltip && (
+              <div className="absolute bottom-full right-0 mb-2 w-72 bg-white rounded-lg shadow-xl p-4 text-sm border border-gray-200 z-50">
+                <p className="font-medium mb-2 text-gray-700">JSON Dataset Format</p>
+                <p className="text-gray-600 mb-3">Upload a JSON file containing an array of faculty members with their details.</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadExampleJSON();
+                  }}
+                  className="flex items-center text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  <FiDownload size={14} className="mr-1" />
+                  Download Example Format
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".json"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
+        
+        {/* Add New Teacher Button */}
+        <button
+          onClick={() => openModal()}
+          className="p-4 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 transition flex items-center"
+        >
+          <FiPlus size={24} className="mr-1" />
+          <span>Add New Teacher</span>
+        </button>
+      </div>
 
       {/* Modal */}
       {showModal && (
