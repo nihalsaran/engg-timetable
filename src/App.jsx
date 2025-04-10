@@ -47,12 +47,12 @@ function App() {
         </Route>
 
         <Route path="/" element={<SuperAdminLayout />}>
-          <Route path="admin-dashboard" element={<SuperAdminDashboard />} />
-          <Route path="users" element={<UserManagement />} />
-          <Route path="departments" element={<DepartmentManagement />} />
-          <Route path="rooms" element={<RoomManagement />} />
-          <Route path="superadmin-reports" element={<ReportsAnalytics />} />
-          <Route path="settings" element={<SettingsSemester />} />
+          <Route path="/admin-dashboard" element={<SuperAdminDashboard />} />
+          <Route path="/users" element={<UserManagement />} />
+          <Route path="/departments" element={<DepartmentManagement />} />
+          <Route path="/admin-rooms" element={<RoomManagement />} />
+          <Route path="/superadmin-reports" element={<ReportsAnalytics />} />
+          <Route path="/settings" element={<SettingsSemester />} />
         </Route>
       </Routes>
     </Router>

@@ -8,13 +8,36 @@ import {
   FiUsers, 
   FiBell, 
   FiSearch, 
-  FiChevronDown 
+  FiChevronDown,
+  FiChevronUp 
 } from 'react-icons/fi';
 
 export default function TTInchargeLayout() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
+  const [semesterDropdownOpen, setSemesterDropdownOpen] = useState(false);
+  const [selectedSemester, setSelectedSemester] = useState('Spring 2025');
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // List of available semesters
+  const availableSemesters = [
+    'Spring 2025',
+    'Fall 2024',
+    'Spring 2024',
+    'Fall 2023'
+  ];
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const closeDropdown = (e) => {
+      if (!e.target.closest('.semester-dropdown')) {
+        setSemesterDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', closeDropdown);
+    return () => document.removeEventListener('mousedown', closeDropdown);
+  }, []);
   
   // Set active item based on current path
   useEffect(() => {
@@ -76,9 +99,36 @@ export default function TTInchargeLayout() {
         <header className="fixed top-0 right-0 left-20 lg:left-64 bg-white shadow flex items-center justify-between p-4 z-10">
           <div className="flex items-center">
             <h2 className="text-xl font-semibold text-gray-800">Timetable Management</h2>
-            <div className="ml-4 flex items-center border rounded-lg px-3 py-1 cursor-pointer hover:bg-gray-50">
-              <span className="text-gray-600 mr-1">Spring 2025</span>
-              <FiChevronDown className="text-gray-500" />
+            <div className="relative semester-dropdown">
+              <div 
+                className="ml-4 flex items-center border rounded-lg px-3 py-1 cursor-pointer hover:bg-gray-50"
+                onClick={() => setSemesterDropdownOpen(!semesterDropdownOpen)}
+              >
+                <span className="text-gray-600 mr-1">{selectedSemester}</span>
+                {semesterDropdownOpen ? 
+                  <FiChevronUp className="text-gray-500" /> : 
+                  <FiChevronDown className="text-gray-500" />
+                }
+              </div>
+              
+              {semesterDropdownOpen && (
+                <div className="absolute top-full left-4 mt-1 w-48 bg-white rounded-lg shadow-lg py-1 z-20">
+                  {availableSemesters.map((semester) => (
+                    <div
+                      key={semester}
+                      className={`px-4 py-2 cursor-pointer hover:bg-gray-100 ${
+                        selectedSemester === semester ? 'bg-indigo-50 text-indigo-600' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedSemester(semester);
+                        setSemesterDropdownOpen(false);
+                      }}
+                    >
+                      {semester}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-5">
