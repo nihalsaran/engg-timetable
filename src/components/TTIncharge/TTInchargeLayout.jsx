@@ -9,13 +9,17 @@ import {
   FiBell, 
   FiSearch, 
   FiChevronDown,
-  FiChevronUp 
+  FiChevronUp,
+  FiChevronLeft,
+  FiChevronRight,
+  FiMenu
 } from 'react-icons/fi';
 
 export default function TTInchargeLayout() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
   const [semesterDropdownOpen, setSemesterDropdownOpen] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState('Spring 2025');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -55,6 +59,10 @@ export default function TTInchargeLayout() {
     }
   }, [location]);
   
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+  
   const sidebarItems = [
     { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/tt-dashboard' },
     { label: 'Timetable Builder', icon: <FiCalendar size={18} />, path: '/timetable-builder' },
@@ -68,36 +76,70 @@ export default function TTInchargeLayout() {
     navigate(path);
   };
 
+  // Determine sidebar width class based on collapsed state and screen size
+  const sidebarWidthClass = sidebarCollapsed 
+    ? "w-16" 
+    : "w-20 lg:w-64";
+  
+  // Determine main content margin based on collapsed state and screen size
+  const mainMarginClass = sidebarCollapsed 
+    ? "ml-16" 
+    : "ml-20 lg:ml-64";
+
+  // Determine header left position based on collapsed state and screen size
+  const headerLeftClass = sidebarCollapsed 
+    ? "left-16" 
+    : "left-20 lg:left-64";
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Left sidebar - Fixed position */}
-      <aside className="fixed top-0 left-0 h-screen w-20 lg:w-64 bg-gradient-to-b from-blue-800 to-indigo-900 text-white flex flex-col z-10">
-        <div className="flex items-center justify-center h-16 border-b border-blue-700">
-          <h1 className="font-bold text-lg hidden lg:block">TT Incharge Portal</h1>
-          <span className="block lg:hidden font-bold text-xl">TT</span>
+      <aside className={`fixed top-0 left-0 h-screen ${sidebarWidthClass} bg-gradient-to-b from-blue-800 to-indigo-900 text-white flex flex-col z-10 transition-all duration-300 ease-in-out`}>
+        <div className="flex items-center justify-between h-16 border-b border-blue-700 px-3">
+          {!sidebarCollapsed && (
+            <h1 className="font-bold text-lg hidden lg:block">TT Incharge Portal</h1>
+          )}
+          {(sidebarCollapsed || window.innerWidth < 1024) && (
+            <span className="font-bold text-xl mx-auto">TT</span>
+          )}
+          <button 
+            onClick={toggleSidebar} 
+            className="p-1 rounded-full hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-white/50"
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? <FiChevronRight size={20} /> : <FiChevronLeft size={20} />}
+          </button>
         </div>
         <nav className="flex-1 p-3 overflow-y-auto">
           {sidebarItems.map((item) => (
             <button
               key={item.label}
               onClick={() => handleNavigation(item.path, item.label)}
-              className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-left mb-2 transition
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-start gap-3'} w-full px-3 py-3 rounded-lg text-left mb-2 transition
                 ${activeSidebarItem === item.label 
                   ? 'bg-white/10 font-semibold' 
                   : 'hover:bg-white/5'}`}
+              title={item.label}
             >
               <div>{item.icon}</div>
-              <span className="hidden lg:block">{item.label}</span>
+              {!sidebarCollapsed && <span className="hidden lg:block">{item.label}</span>}
             </button>
           ))}
         </nav>
       </aside>
 
       {/* Main content with margin to account for fixed sidebar */}
-      <div className="flex-1 flex flex-col ml-20 lg:ml-64">
+      <div className={`flex-1 flex flex-col ${mainMarginClass} transition-all duration-300 ease-in-out`}>
         {/* Top bar - Fixed position */}
-        <header className="fixed top-0 right-0 left-20 lg:left-64 bg-white shadow flex items-center justify-between p-4 z-10">
+        <header className={`fixed top-0 right-0 ${headerLeftClass} bg-white shadow flex items-center justify-between p-4 z-10 transition-all duration-300 ease-in-out`}>
           <div className="flex items-center">
+            <button 
+              onClick={toggleSidebar}
+              className="mr-2 md:hidden p-1 rounded hover:bg-gray-100"
+              aria-label="Toggle sidebar"
+            >
+              <FiMenu size={20} />
+            </button>
             <h2 className="text-xl font-semibold text-gray-800">Timetable Management</h2>
             <div className="relative semester-dropdown">
               <div 
@@ -131,6 +173,8 @@ export default function TTInchargeLayout() {
               )}
             </div>
           </div>
+          
+          {/* Rest of the header content */}
           <div className="flex items-center gap-5">
             <div className="relative">
               <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
