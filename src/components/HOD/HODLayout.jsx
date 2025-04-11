@@ -61,13 +61,13 @@ export default function HODLayout() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Left sidebar */}
-      <aside className="w-20 lg:w-64 bg-gradient-to-b from-teal-800 to-blue-900 text-white flex flex-col transition-all duration-300">
+      {/* Left sidebar - Fixed */}
+      <aside className="w-20 lg:w-64 bg-gradient-to-b from-teal-800 to-blue-900 text-white flex flex-col fixed h-full transition-all duration-300 z-10">
         <div className="flex items-center justify-center h-16 border-b border-teal-700">
           <h1 className="font-bold text-lg hidden lg:block">HOD Portal</h1>
           <span className="block lg:hidden font-bold text-xl">H</span>
         </div>
-        <nav className="flex-1 p-3">
+        <nav className="flex-1 p-3 overflow-y-auto">
           {sidebarItems.map((item) => (
             <button
               key={item.label}
@@ -84,9 +84,9 @@ export default function HODLayout() {
         </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col">
-        {/* Top bar */}
-        <header className="bg-white shadow flex items-center justify-between p-4">
+      <div className="flex-1 flex flex-col ml-20 lg:ml-64">
+        {/* Top bar - Fixed */}
+        <header className="bg-white shadow flex items-center justify-between p-4 fixed top-0 right-0 left-20 lg:left-64 z-10">
           <div className="flex items-center">
             <h2 className="text-xl font-semibold text-gray-800">Computer Science Department</h2>
             <div className="relative semester-dropdown">
@@ -150,8 +150,8 @@ export default function HODLayout() {
           </div>
         </header>
 
-        {/* Main content area */}
-        <main className="flex-1 p-6">
+        {/* Main content area with padding for fixed header */}
+        <main className="flex-1 p-6 mt-16">
           <Outlet />
         </main>
       </div>
