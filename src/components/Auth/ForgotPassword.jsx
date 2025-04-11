@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampusIllustration from './CampusIllustration';
-import authService from '../appwrite/auth';
+import authService from '../../appwrite/auth';
 
 const ForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
