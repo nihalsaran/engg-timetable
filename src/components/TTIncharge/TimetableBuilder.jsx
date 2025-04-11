@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiSave, 
   FiUpload, 
@@ -16,7 +16,9 @@ import {
   FiArrowRight,
   FiRefreshCw,
   FiChevronLeft,
-  FiChevronRight
+  FiChevronRight,
+  FiPlus,
+  FiEdit2
 } from 'react-icons/fi';
 
 // Import services and data
@@ -36,6 +38,15 @@ import {
 } from './services/TimetableBuilder';
 
 export default function TimetableBuilder() {
+  // State for multiple timetable tabs
+  const [tabs, setTabs] = useState([
+    { id: 1, name: "CSE Timetable", isActive: true },
+  ]);
+  const [activeTabId, setActiveTabId] = useState(1);
+  const [nextTabId, setNextTabId] = useState(2);
+  const [isEditingTab, setIsEditingTab] = useState(null);
+  const [editTabName, setEditTabName] = useState("");
+  
   // State for filters
   const [selectedSemester, setSelectedSemester] = useState('Spring 2025');
   const [selectedDepartment, setSelectedDepartment] = useState(null);
@@ -45,22 +56,28 @@ export default function TimetableBuilder() {
   const [viewMode, setViewMode] = useState('week'); // 'week' or 'day'
   const [currentDay, setCurrentDay] = useState('Monday');
   
-  // State for the timetable grid
-  const [timetableData, setTimetableData] = useState({});
+  // State for the timetable grid - now an object with tabId as keys
+  const [timetablesData, setTimetablesData] = useState({});
   
   // Selected room
   const [selectedRoom, setSelectedRoom] = useState(roomsData[0]);
   
-  // Conflicts
-  const [conflicts, setConflicts] = useState([]);
+  // Conflicts - now an object with tabId as keys
+  const [conflictsData, setConflictsData] = useState({});
   
   // Dragging state
   const [isDragging, setIsDragging] = useState(false);
   const [draggedCourse, setDraggedCourse] = useState(null);
   
-  // History for undo/redo
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  // History for undo/redo - now an object with tabId as keys
+  const [historyData, setHistoryData] = useState({});
+  const [historyIndices, setHistoryIndices] = useState({});
+
+  // Helper to get current tab's data
+  const timetableData = timetablesData[activeTabId] || {};
+  const conflicts = conflictsData[activeTabId] || [];
+  const history = historyData[activeTabId] || [];
+  const historyIndex = historyIndices[activeTabId] || -1;
 
   // Filter courses based on selected filters
   const filteredCourses = filterCourses(coursesData, { 
@@ -72,28 +89,136 @@ export default function TimetableBuilder() {
   // Initialize empty timetable data on component mount
   useEffect(() => {
     const initialData = initializeEmptyTimetable();
-    setTimetableData(initialData);
     
-    // Add to history
-    addToHistory(initialData);
+    // Initialize data for the first tab
+    setTimetablesData({ 1: initialData });
+    setConflictsData({ 1: [] });
+    
+    // Initialize history for the first tab
+    addToHistory(1, initialData);
   }, []);
 
+  // Add a new tab
+  const addNewTab = () => {
+    const newTabId = nextTabId;
+    const initialData = initializeEmptyTimetable();
+    
+    // Add new tab
+    setTabs(prevTabs => [
+      ...prevTabs.map(tab => ({ ...tab, isActive: false })),
+      { id: newTabId, name: `New Timetable ${newTabId}`, isActive: true }
+    ]);
+    
+    // Set the new tab as active
+    setActiveTabId(newTabId);
+    
+    // Initialize data for the new tab
+    setTimetablesData(prev => ({ ...prev, [newTabId]: initialData }));
+    setConflictsData(prev => ({ ...prev, [newTabId]: [] }));
+    
+    // Initialize history for the new tab
+    addToHistory(newTabId, initialData);
+    
+    // Increment next tab id
+    setNextTabId(prevId => prevId + 1);
+  };
+
+  // Switch to a tab
+  const switchTab = (tabId) => {
+    setTabs(prevTabs => 
+      prevTabs.map(tab => ({ 
+        ...tab, 
+        isActive: tab.id === tabId 
+      }))
+    );
+    setActiveTabId(tabId);
+  };
+
+  // Close a tab
+  const closeTab = (tabId, event) => {
+    event.stopPropagation();
+    
+    // Don't close if it's the only tab
+    if (tabs.length === 1) return;
+    
+    // If closing the active tab, switch to another tab first
+    if (tabId === activeTabId) {
+      const activeIndex = tabs.findIndex(tab => tab.id === activeTabId);
+      const newActiveIndex = activeIndex === 0 ? 1 : activeIndex - 1;
+      const newActiveTabId = tabs[newActiveIndex].id;
+      switchTab(newActiveTabId);
+    }
+    
+    // Remove the tab
+    setTabs(prevTabs => prevTabs.filter(tab => tab.id !== tabId));
+    
+    // Clean up data
+    setTimetablesData(prev => {
+      const newData = { ...prev };
+      delete newData[tabId];
+      return newData;
+    });
+    
+    setConflictsData(prev => {
+      const newData = { ...prev };
+      delete newData[tabId];
+      return newData;
+    });
+    
+    setHistoryData(prev => {
+      const newData = { ...prev };
+      delete newData[tabId];
+      return newData;
+    });
+    
+    setHistoryIndices(prev => {
+      const newData = { ...prev };
+      delete newData[tabId];
+      return newData;
+    });
+  };
+
+  // Start editing tab name
+  const startEditingTab = (tabId, event) => {
+    event.stopPropagation();
+    const tab = tabs.find(t => t.id === tabId);
+    setIsEditingTab(tabId);
+    setEditTabName(tab.name);
+  };
+
+  // Save tab name
+  const saveTabName = () => {
+    if (isEditingTab) {
+      setTabs(prevTabs => prevTabs.map(tab => 
+        tab.id === isEditingTab ? { ...tab, name: editTabName || tab.name } : tab
+      ));
+      setIsEditingTab(null);
+      setEditTabName("");
+    }
+  };
+
   // Function to add current state to history
-  const addToHistory = (data) => {
+  const addToHistory = (tabId, data) => {
+    const tabHistory = historyData[tabId] || [];
+    const tabHistoryIndex = historyIndices[tabId] || -1;
+    
     // Remove any future states if we're not at the end of the history
-    const newHistory = history.slice(0, historyIndex + 1);
+    const newHistory = tabHistory.slice(0, tabHistoryIndex + 1);
     newHistory.push(JSON.parse(JSON.stringify(data)));
     
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+    setHistoryData(prev => ({ ...prev, [tabId]: newHistory }));
+    setHistoryIndices(prev => ({ ...prev, [tabId]: newHistory.length - 1 }));
   };
 
   // Handle undo
   const handleUndo = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      setTimetableData(JSON.parse(JSON.stringify(history[newIndex])));
+      setHistoryIndices(prev => ({ ...prev, [activeTabId]: newIndex }));
+      setTimetablesData(prev => ({ 
+        ...prev, 
+        [activeTabId]: JSON.parse(JSON.stringify(history[newIndex]))
+      }));
     }
   };
 
@@ -101,8 +226,11 @@ export default function TimetableBuilder() {
   const handleRedo = () => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      setTimetableData(JSON.parse(JSON.stringify(history[newIndex])));
+      setHistoryIndices(prev => ({ ...prev, [activeTabId]: newIndex }));
+      setTimetablesData(prev => ({ 
+        ...prev, 
+        [activeTabId]: JSON.parse(JSON.stringify(history[newIndex]))
+      }));
     }
   };
 
@@ -117,16 +245,19 @@ export default function TimetableBuilder() {
     if (draggedCourse) {
       // Check for conflicts
       const newConflicts = checkConflicts(timetableData, day, slot, draggedCourse, selectedRoom);
-      setConflicts([...conflicts, ...newConflicts]);
+      setConflictsData(prev => ({ 
+        ...prev, 
+        [activeTabId]: [...(prev[activeTabId] || []), ...newConflicts]
+      }));
       
       // Add the course to the timetable
       const newTimetable = addCourseToTimetable(timetableData, day, slot, draggedCourse, selectedRoom);
       
       // Update timetable data
-      setTimetableData(newTimetable);
+      setTimetablesData(prev => ({ ...prev, [activeTabId]: newTimetable }));
       
       // Add to history
-      addToHistory(newTimetable);
+      addToHistory(activeTabId, newTimetable);
       
       // Reset dragging state
       setIsDragging(false);
@@ -139,18 +270,20 @@ export default function TimetableBuilder() {
     // Create a new empty timetable
     const newTimetable = initializeEmptyTimetable();
     
-    setTimetableData(newTimetable);
-    setConflicts([]);
+    setTimetablesData(prev => ({ ...prev, [activeTabId]: newTimetable }));
+    setConflictsData(prev => ({ ...prev, [activeTabId]: [] }));
     
     // Add to history
-    addToHistory(newTimetable);
+    addToHistory(activeTabId, newTimetable);
   };
 
   // Handle resolving a conflict
   const handleResolveConflict = (conflictIndex) => {
-    const newConflicts = [...conflicts];
-    newConflicts.splice(conflictIndex, 1);
-    setConflicts(newConflicts);
+    setConflictsData(prev => {
+      const newConflicts = [...(prev[activeTabId] || [])];
+      newConflicts.splice(conflictIndex, 1);
+      return { ...prev, [activeTabId]: newConflicts };
+    });
   };
 
   // Handle save timetable
@@ -172,6 +305,21 @@ export default function TimetableBuilder() {
       alert(error.message);
     }
   };
+
+  // For handling click outside the tab editing input
+  const tabEditRef = useRef(null);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (tabEditRef.current && !tabEditRef.current.contains(event.target)) {
+        saveTabName();
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isEditingTab, editTabName]);
 
   return (
     <div className="space-y-6">
@@ -318,6 +466,54 @@ export default function TimetableBuilder() {
         
         {/* Center Panel: Timetable Grid */}
         <div className="flex-1 bg-white rounded-2xl shadow-md p-4 overflow-x-auto">
+          {/* Tabs */}
+          <div className="flex items-center gap-2 mb-4 border-b pb-3">
+            {tabs.map(tab => (
+              <div 
+                key={tab.id} 
+                className={`flex items-center gap-2 px-4 py-2 rounded-t-lg cursor-pointer ${tab.isActive ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                onClick={() => switchTab(tab.id)}
+              >
+                {isEditingTab === tab.id ? (
+                  <div ref={tabEditRef} className="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      value={editTabName} 
+                      onChange={(e) => setEditTabName(e.target.value)} 
+                      className="px-2 py-1 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    />
+                    <button onClick={saveTabName} className="text-gray-700 hover:text-gray-900">
+                      <FiCheck />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span>{tab.name}</span>
+                    <button 
+                      onClick={(e) => startEditingTab(tab.id, e)} 
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <FiEdit2 />
+                    </button>
+                    <button 
+                      onClick={(e) => closeTab(tab.id, e)} 
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <FiX />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+            <button 
+              onClick={addNewTab} 
+              className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"
+            >
+              <FiPlus />
+              <span>New Tab</span>
+            </button>
+          </div>
+
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-700">
               {viewMode === 'week' ? 'Weekly Schedule' : `${currentDay} Schedule`}
