@@ -1,44 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiUser, FiBookOpen, FiAward, FiLayers, FiUpload, FiInfo, FiDownload } from 'react-icons/fi';
-import authService from '../../appwrite/auth';
-import facultyService from '../../appwrite/database/facultyService';
-
-// Subject areas that teachers can specialize in
-const subjectAreas = [
-  'Algorithms & Data Structures',
-  'Artificial Intelligence',
-  'Computer Networks',
-  'Database Systems',
-  'Operating Systems',
-  'Software Engineering',
-  'Web Development',
-  'Machine Learning',
-  'Embedded Systems',
-  'Cybersecurity',
-  'Cloud Computing',
-  'Mobile Development',
-  'Computer Architecture',
-  'Theoretical Computer Science',
-  'Graphics & Visualization'
-];
-
-const departments = [
-  'Computer Science', 
-  'Electrical Engineering', 
-  'Mechanical Engineering',
-  'Civil Engineering',
-  'Chemical Engineering'
-];
-
-// Sample teachers data - will be replaced with actual data from the database
-const dummyTeachers = [
-  { id: 1, name: 'Dr. Jane Smith', email: 'jane@univ.edu', department: 'Computer Science', expertise: ['Algorithms & Data Structures', 'Artificial Intelligence'], qualification: 'Ph.D Computer Science', experience: 8, active: true },
-  { id: 2, name: 'Prof. Michael Johnson', email: 'michael@univ.edu', department: 'Electrical Engineering', expertise: ['Computer Networks', 'Embedded Systems'], qualification: 'Ph.D Electrical Engineering', experience: 12, active: true },
-  { id: 3, name: 'Dr. Sarah Williams', email: 'sarah@univ.edu', department: 'Computer Science', expertise: ['Database Systems', 'Web Development'], qualification: 'Ph.D Information Systems', experience: 6, active: false },
-];
+import TeacherManagementService from './services/TeacherManagement';
 
 export default function TeacherManagement() {
-  const [teachers, setTeachers] = useState(dummyTeachers);
+  const [teachers, setTeachers] = useState(TeacherManagementService.dummyTeachers);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -84,9 +49,11 @@ export default function TeacherManagement() {
   const fetchTeachers = async () => {
     try {
       setIsLoading(true);
-      const response = await facultyService.getAllFaculty();
+      const response = await TeacherManagementService.fetchTeachers();
       if (response.success) {
-        setTeachers(response.faculty);
+        setTeachers(response.teachers);
+      } else {
+        setError(response.error || 'Failed to load teachers');
       }
     } catch (error) {
       setError('Failed to load teachers');
@@ -161,62 +128,21 @@ export default function TeacherManagement() {
     setIsLoading(true);
     
     try {
-      // Create user account first if this is a new teacher
+      let result;
+      
       if (!editingId) {
-        const { name, email, password } = formData;
-        const userResult = await authService.createAccount(email, password, name);
-        
-        if (!userResult.success) {
-          throw new Error('Failed to create user account');
-        }
-        
-        // Now create the teacher profile in the faculty collection
-        const teacherData = {
-          userId: userResult.user.$id, // Link to the auth user
-          name: formData.name,
-          email: formData.email,
-          department: formData.department,
-          expertise: formData.expertise,
-          qualification: formData.qualification,
-          experience: parseInt(formData.experience),
-          active: formData.active,
-          role: 'Faculty',
-          maxHours: 40, // Default max teaching hours per week
-          status: 'available'
-        };
-        
-        const facultyResult = await facultyService.createFaculty(teacherData);
-        
-        if (facultyResult.success) {
-          // Refresh the teachers list
-          fetchTeachers();
-          closeModal();
-        }
+        // Create new teacher
+        result = await TeacherManagementService.createTeacher(formData);
       } else {
         // Update existing teacher
-        const teacherData = {
-          name: formData.name,
-          department: formData.department,
-          expertise: formData.expertise,
-          qualification: formData.qualification,
-          experience: parseInt(formData.experience),
-          active: formData.active
-        };
-        
-        const result = await facultyService.updateFaculty(editingId, teacherData);
-        
-        if (result.success) {
-          // Update password if provided
-          if (formData.password) {
-            // Note: Password update would typically require a different approach
-            // This is a placeholder for where you might handle password changes
-            console.log("Password would be updated here");
-          }
-          
-          // Refresh the teachers list
-          fetchTeachers();
-          closeModal();
-        }
+        result = await TeacherManagementService.updateTeacher(editingId, formData);
+      }
+      
+      if (result.success) {
+        fetchTeachers();
+        closeModal();
+      } else {
+        setError(result.error || 'Failed to save teacher information');
       }
     } catch (err) {
       setError(err.message || 'Failed to save teacher information');
@@ -234,11 +160,12 @@ export default function TeacherManagement() {
     if (window.confirm('Are you sure you want to delete this teacher?')) {
       try {
         setIsLoading(true);
-        const result = await facultyService.deleteFaculty(id);
+        const result = await TeacherManagementService.deleteTeacher(id);
         
         if (result.success) {
-          // Refresh the teachers list
           setTeachers(teachers.filter(teacher => teacher.id !== id));
+        } else {
+          setError(result.error || 'Failed to delete teacher');
         }
       } catch (error) {
         setError('Failed to delete teacher');
@@ -247,30 +174,6 @@ export default function TeacherManagement() {
         setIsLoading(false);
       }
     }
-  };
-
-  // Generate avatar initials from name
-  const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
-  // Generate background color for avatar based on name
-  const getAvatarBg = (name) => {
-    const colors = [
-      'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 
-      'bg-red-500', 'bg-orange-500', 'bg-amber-500',
-      'bg-yellow-500', 'bg-lime-500', 'bg-green-500',
-      'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500',
-      'bg-sky-500', 'bg-blue-500', 'bg-violet-500'
-    ];
-    
-    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[hash % colors.length];
   };
 
   // Trigger the hidden file input
@@ -293,93 +196,21 @@ export default function TeacherManagement() {
       reader.onload = async (event) => {
         try {
           const jsonData = JSON.parse(event.target.result);
+          const result = await TeacherManagementService.processFacultyImport(jsonData);
           
-          // Validate the JSON structure
-          if (!Array.isArray(jsonData)) {
-            throw new Error('Invalid JSON format. Expected an array of faculty members.');
-          }
-          
-          // Process each faculty member in the dataset
-          const results = [];
-          for (const faculty of jsonData) {
-            // Basic validation
-            if (!faculty.name || !faculty.email || !faculty.department) {
-              results.push({
-                name: faculty.name || 'Unknown',
-                success: false,
-                error: 'Missing required fields (name, email, or department)'
-              });
-              continue;
+          if (result.success) {
+            const successful = result.results.filter(r => r.success).length;
+            if (successful === result.results.length) {
+              alert(`Successfully imported ${successful} faculty members.`);
+            } else {
+              alert(`Imported ${successful} out of ${result.results.length} faculty members. Check console for details.`);
+              console.table(result.results);
             }
             
-            try {
-              // Create user account
-              const userResult = await authService.createAccount(
-                faculty.email, 
-                faculty.password || 'defaultPassword123', // You might want to handle this differently
-                faculty.name
-              );
-              
-              if (!userResult.success) {
-                results.push({
-                  name: faculty.name,
-                  success: false,
-                  error: 'Failed to create user account'
-                });
-                continue;
-              }
-              
-              // Create faculty profile
-              const teacherData = {
-                userId: userResult.user.$id,
-                name: faculty.name,
-                email: faculty.email,
-                department: faculty.department,
-                expertise: faculty.expertise || [],
-                qualification: faculty.qualification || '',
-                experience: parseInt(faculty.experience || 0),
-                active: faculty.active !== undefined ? faculty.active : true,
-                role: 'Faculty',
-                maxHours: faculty.maxHours || 40,
-                status: 'available'
-              };
-              
-              const facultyResult = await facultyService.createFaculty(teacherData);
-              
-              if (facultyResult.success) {
-                results.push({
-                  name: faculty.name,
-                  success: true
-                });
-              } else {
-                results.push({
-                  name: faculty.name,
-                  success: false,
-                  error: 'Failed to create faculty profile'
-                });
-              }
-              
-            } catch (err) {
-              results.push({
-                name: faculty.name,
-                success: false,
-                error: err.message
-              });
-            }
-          }
-          
-          // Show results summary
-          const successful = results.filter(r => r.success).length;
-          if (successful === results.length) {
-            alert(`Successfully imported ${successful} faculty members.`);
+            fetchTeachers();
           } else {
-            alert(`Imported ${successful} out of ${results.length} faculty members. Check console for details.`);
-            console.table(results);
+            setError(result.error || 'Error processing data');
           }
-          
-          // Refresh the teachers list
-          fetchTeachers();
-          
         } catch (err) {
           setError(`Error parsing JSON: ${err.message}`);
           console.error(err);
@@ -406,30 +237,7 @@ export default function TeacherManagement() {
 
   // Download example JSON dataset
   const downloadExampleJSON = () => {
-    const exampleData = [
-      {
-        "name": "Dr. John Doe",
-        "email": "john.doe@university.edu",
-        "password": "securePassword123",
-        "department": "Computer Science",
-        "expertise": ["Algorithms & Data Structures", "Artificial Intelligence"],
-        "qualification": "Ph.D Computer Science",
-        "experience": 10,
-        "active": true,
-        "maxHours": 40
-      },
-      {
-        "name": "Dr. Jane Smith",
-        "email": "jane.smith@university.edu",
-        "password": "securePassword456",
-        "department": "Electrical Engineering",
-        "expertise": ["Computer Networks", "Embedded Systems"],
-        "qualification": "Ph.D Electrical Engineering",
-        "experience": 8,
-        "active": true,
-        "maxHours": 35
-      }
-    ];
+    const exampleData = TeacherManagementService.getExampleJSONDataset();
     
     const blob = new Blob([JSON.stringify(exampleData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -470,8 +278,8 @@ export default function TeacherManagement() {
               <tr key={teacher.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-medium ${getAvatarBg(teacher.name)}`}>
-                      {getInitials(teacher.name)}
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-medium ${TeacherManagementService.getAvatarBg(teacher.name)}`}>
+                      {TeacherManagementService.getInitials(teacher.name)}
                     </div>
                     <div className="ml-3">
                       <div className="text-sm font-medium text-gray-900">{teacher.name}</div>
@@ -685,7 +493,7 @@ export default function TeacherManagement() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-400 focus:outline-none appearance-none pt-6"
                     >
                       <option value="" disabled>Select Department</option>
-                      {departments.map((dept) => (
+                      {TeacherManagementService.departments.map((dept) => (
                         <option key={dept} value={dept}>{dept}</option>
                       ))}
                     </select>
@@ -750,7 +558,7 @@ export default function TeacherManagement() {
                     Areas of Expertise (Select all that apply)
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {subjectAreas.map((subject) => (
+                    {TeacherManagementService.subjectAreas.map((subject) => (
                       <button
                         key={subject}
                         type="button"
