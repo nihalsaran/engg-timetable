@@ -1,46 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiBookOpen, FiUser, FiSearch, FiEdit, FiTrash2, FiBook } from 'react-icons/fi';
-
-const dummyDepartments = [
-  { 
-    id: 1, 
-    name: 'Computer Science', 
-    type: 'Engineering', 
-    status: 'Active', 
-    hod: 'Alice Johnson', 
-    hodAvatar: 'https://via.placeholder.com/30',
-    totalCourses: 12
-  },
-  { 
-    id: 2, 
-    name: 'Mechanical', 
-    type: 'Engineering', 
-    status: 'Inactive', 
-    hod: 'Bob Smith', 
-    hodAvatar: 'https://via.placeholder.com/30',
-    totalCourses: 8
-  },
-  { 
-    id: 3, 
-    name: 'Mathematics', 
-    type: 'Science', 
-    status: 'Active', 
-    hod: 'Charlie Brown', 
-    hodAvatar: 'https://via.placeholder.com/30',
-    totalCourses: 6
-  },
-];
-
-const hodOptions = [
-  { name: 'Alice Johnson', avatar: 'https://via.placeholder.com/30' },
-  { name: 'Bob Smith', avatar: 'https://via.placeholder.com/30' },
-  { name: 'Charlie Brown', avatar: 'https://via.placeholder.com/30' },
-];
+import { 
+  getAllDepartments, 
+  getHODOptions, 
+  searchDepartments, 
+  createDepartment, 
+  updateDepartment, 
+  deleteDepartment 
+} from './services/DepartmentManagement';
 
 export default function DepartmentManagement() {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ name: '', type: '', hod: '', description: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [departments, setDepartments] = useState([]);
+  const [hodOptions, setHodOptions] = useState([]);
+
+  useEffect(() => {
+    // Load initial data
+    setDepartments(getAllDepartments());
+    setHodOptions(getHODOptions());
+  }, []);
 
   const openModal = () => setShowModal(true);
   const closeModal = () => setShowModal(false);
@@ -51,26 +31,33 @@ export default function DepartmentManagement() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Created department:', formData);
+    const newDepartment = createDepartment(formData);
+    setDepartments([...departments, newDepartment]);
+    setFormData({ name: '', type: '', hod: '', description: '' });
     closeModal();
   };
 
   const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
+    const term = e.target.value;
+    setSearchTerm(term);
+    const filtered = searchDepartments(term);
+    setDepartments(filtered);
   };
 
-  const filteredDepartments = dummyDepartments.filter(dept => 
-    dept.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const handleEdit = (dept) => {
+    // In a real app, you might open an edit modal here
     console.log('Edit department:', dept);
-    // Implementation for editing would go here
+    const updated = updateDepartment(dept);
+    if (updated) {
+      setDepartments(departments.map(d => d.id === updated.id ? updated : d));
+    }
   };
 
   const handleDelete = (id) => {
-    console.log('Delete department with id:', id);
-    // Implementation for deleting would go here
+    const deleted = deleteDepartment(id);
+    if (deleted) {
+      setDepartments(departments.filter(dept => dept.id !== id));
+    }
   };
 
   return (
@@ -100,7 +87,7 @@ export default function DepartmentManagement() {
 
       {/* Department Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredDepartments.map((dept) => (
+        {departments.map((dept) => (
           <div key={dept.id} className="rounded-xl backdrop-blur-lg bg-white/30 border border-white/20 shadow-lg p-6 transition-all hover:shadow-xl">
             <div className="flex justify-between items-start mb-4">
               <h3 className="font-bold text-lg">{dept.name}</h3>
@@ -157,7 +144,7 @@ export default function DepartmentManagement() {
       </div>
       
       {/* Empty state when no departments match search */}
-      {filteredDepartments.length === 0 && (
+      {departments.length === 0 && (
         <div className="text-center py-12 backdrop-blur-lg bg-white/20 rounded-xl">
           <p className="text-gray-500">No departments found matching your search.</p>
         </div>
