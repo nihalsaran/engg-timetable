@@ -140,3 +140,144 @@ export const getDepartmentColorClass = (department) => {
       return 'bg-gray-100 text-gray-800';
   }
 };
+
+// Get example JSON dataset for download
+export const getExampleJSONDataset = () => {
+  return [
+    {
+      "roomNumber": "E101",
+      "capacity": 50,
+      "features": ["AC", "Projector", "Wi-Fi"],
+      "department": "Computer Science"
+    },
+    {
+      "roomNumber": "E102",
+      "capacity": 35,
+      "features": ["SmartBoard", "Computers"],
+      "department": "Electrical Engineering"
+    },
+    {
+      "roomNumber": "E103",
+      "capacity": 60,
+      "features": ["AC", "Projector", "Audio System"],
+      "department": "Physics"
+    }
+  ];
+};
+
+// Process room import from JSON file
+export const processRoomImport = async (jsonData) => {
+  try {
+    // Validate that jsonData is an array
+    if (!Array.isArray(jsonData)) {
+      return { 
+        success: false, 
+        error: 'Invalid data format. Expected an array of rooms.'
+      };
+    }
+
+    const results = [];
+    let successCount = 0;
+
+    // Process each room in the array
+    for (const room of jsonData) {
+      try {
+        // Validate required fields
+        if (!room.roomNumber) {
+          results.push({ 
+            roomNumber: room.roomNumber || 'Unknown', 
+            success: false, 
+            error: 'Room number is required' 
+          });
+          continue;
+        }
+
+        if (!room.capacity || isNaN(parseInt(room.capacity))) {
+          results.push({ 
+            roomNumber: room.roomNumber, 
+            success: false, 
+            error: 'Valid capacity is required' 
+          });
+          continue;
+        }
+
+        if (!room.department || !departmentOptions.includes(room.department)) {
+          results.push({ 
+            roomNumber: room.roomNumber, 
+            success: false, 
+            error: `Department must be one of: ${departmentOptions.join(', ')}` 
+          });
+          continue;
+        }
+
+        // Validate features if present
+        if (room.features && Array.isArray(room.features)) {
+          const validFeatures = featureOptions.map(f => f.id);
+          const invalidFeatures = room.features.filter(f => !validFeatures.includes(f));
+          if (invalidFeatures.length > 0) {
+            results.push({ 
+              roomNumber: room.roomNumber, 
+              success: false, 
+              error: `Invalid features: ${invalidFeatures.join(', ')}` 
+            });
+            continue;
+          }
+        }
+
+        // Prepare room data
+        const roomData = {
+          roomNumber: room.roomNumber,
+          capacity: parseInt(room.capacity),
+          features: Array.isArray(room.features) ? room.features : [],
+          department: room.department
+        };
+
+        // Check if room already exists
+        const existingRoomIndex = dummyRooms.findIndex(r => 
+          r.roomNumber.toLowerCase() === roomData.roomNumber.toLowerCase()
+        );
+
+        let savedRoom;
+        if (existingRoomIndex !== -1) {
+          // Update existing room
+          savedRoom = updateRoom(dummyRooms[existingRoomIndex].id, roomData);
+        } else {
+          // Add new room
+          savedRoom = addRoom(roomData);
+        }
+
+        if (savedRoom) {
+          results.push({ 
+            roomNumber: room.roomNumber, 
+            success: true, 
+            action: existingRoomIndex !== -1 ? 'updated' : 'added'
+          });
+          successCount++;
+        } else {
+          results.push({ 
+            roomNumber: room.roomNumber, 
+            success: false, 
+            error: 'Failed to save room' 
+          });
+        }
+      } catch (err) {
+        results.push({ 
+          roomNumber: room.roomNumber || 'Unknown', 
+          success: false, 
+          error: err.message || 'Error processing room'
+        });
+      }
+    }
+
+    return {
+      success: true,
+      results: results,
+      summary: `Processed ${results.length} rooms. Successfully imported ${successCount} rooms.`
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.message || 'Failed to process room data',
+    };
+  }
+};

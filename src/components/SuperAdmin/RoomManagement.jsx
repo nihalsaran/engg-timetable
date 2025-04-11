@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FiPlus, FiEdit, FiTrash2, FiSearch, FiX, FiHome, FiUsers, FiMonitor, FiWifi, FiThermometer, FiSave } from 'react-icons/fi';
+import { FiPlus, FiEdit, FiTrash2, FiSearch, FiX, FiHome, FiUsers, FiMonitor, FiWifi, FiThermometer, FiSave, FiUpload, FiInfo, FiDownload } from 'react-icons/fi';
 import { 
   getRooms, 
   addRoom, 
@@ -9,7 +9,9 @@ import {
   filterRooms, 
   departmentOptions, 
   featureOptions as serviceFeatureOptions,
-  getDepartmentColorClass 
+  getDepartmentColorClass,
+  getExampleJSONDataset,
+  processRoomImport
 } from './services/RoomManagement';
 
 // Feature options with icons
@@ -51,6 +53,12 @@ export default function RoomManagement() {
     features: [],
     department: 'Computer Science'
   });
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fileInputRef = useRef(null);
+  const tooltipRef = useRef(null);
 
   // Initialize rooms on component mount
   useEffect(() => {
@@ -58,6 +66,24 @@ export default function RoomManagement() {
     setRooms(allRooms);
     setFilteredRooms(allRooms);
   }, []);
+
+  // Handle outside clicks to close tooltip
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target)) {
+        setShowInfoTooltip(false);
+      }
+    };
+
+    // Add event listener only when tooltip is shown
+    if (showInfoTooltip) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showInfoTooltip]);
 
   // Filter rooms whenever filter parameters change
   useEffect(() => {
@@ -143,6 +169,83 @@ export default function RoomManagement() {
     setSelectedDepartment('');
     setSelectedFeature('');
     setSearchTerm('');
+  };
+
+  // Trigger the hidden file input
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle file upload and JSON parsing
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const jsonData = JSON.parse(event.target.result);
+          const result = await processRoomImport(jsonData);
+          
+          if (result.success) {
+            const successful = result.results.filter(r => r.success).length;
+            if (successful === result.results.length) {
+              alert(`Successfully imported ${successful} rooms.`);
+            } else {
+              alert(`Imported ${successful} out of ${result.results.length} rooms. Check console for details.`);
+              console.table(result.results);
+            }
+            
+            // Refresh rooms list
+            const allRooms = getRooms();
+            setRooms(allRooms);
+            setFilteredRooms(allRooms);
+          } else {
+            setError(result.error || 'Error processing data');
+          }
+        } catch (err) {
+          setError(`Error parsing JSON: ${err.message}`);
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        setError('Error reading the file');
+        setIsLoading(false);
+      };
+      
+      reader.readAsText(file);
+      
+    } catch (err) {
+      setError(err.message || 'An error occurred during file upload');
+      setIsLoading(false);
+    }
+    
+    // Reset the file input
+    e.target.value = '';
+  };
+
+  // Download example JSON dataset
+  const downloadExampleJSON = () => {
+    const exampleData = getExampleJSONDataset();
+    
+    const blob = new Blob([JSON.stringify(exampleData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'room_dataset_example.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -433,13 +536,66 @@ export default function RoomManagement() {
         </div>
       )}
       
-      {/* Floating Add Button that glows on hover */}
-      <button
-        onClick={openNewRoomModal}
-        className="fixed bottom-8 right-8 p-4 rounded-full bg-gradient-to-r from-teal-500 to-blue-500 text-white shadow-lg hover:shadow-teal-200/50 hover:scale-110 transition-all duration-300 flex items-center justify-center"
-      >
-        <span className="text-2xl">➕</span>
-      </button>
+      {/* Floating Buttons Group */}
+      <div className="fixed bottom-8 right-8 flex flex-col gap-4">
+        {/* Upload Room Dataset Button with Info Icon */}
+        <div className="flex items-center relative group">
+          <button
+            onClick={handleUploadClick}
+            className="p-4 rounded-full bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg hover:scale-105 transition flex items-center"
+          >
+            <FiUpload size={20} className="mr-2" />
+            <span>Upload Room Dataset</span>
+          </button>
+          
+          {/* Info Icon with Tooltip */}
+          <div 
+            className="relative ml-2"
+            ref={tooltipRef}
+            onClick={() => setShowInfoTooltip(!showInfoTooltip)}
+          >
+            <button
+              className="w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100"
+            >
+              <FiInfo size={16} className="text-teal-600" />
+            </button>
+            
+            {/* Tooltip */}
+            {showInfoTooltip && (
+              <div className="absolute bottom-full right-0 mb-2 w-72 bg-white rounded-lg shadow-xl p-4 text-sm border border-gray-200 z-50">
+                <p className="font-medium mb-2 text-gray-700">JSON Dataset Format</p>
+                <p className="text-gray-600 mb-3">Upload a JSON file containing an array of rooms with their details.</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadExampleJSON();
+                  }}
+                  className="flex items-center text-teal-600 hover:text-teal-800 font-medium"
+                >
+                  <FiDownload size={14} className="mr-1" />
+                  Download Example Format
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".json"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-md">
+          {error}
+        </div>
+      )}
     </div>
   );
 }
