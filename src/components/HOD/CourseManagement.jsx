@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FiEdit, FiTrash2, FiSearch, FiFilter, FiX, FiBook, FiUser, FiClock, FiCalendar, FiHash } from 'react-icons/fi';
+import React, { useState, useEffect, useRef } from 'react';
+import { FiEdit, FiTrash2, FiSearch, FiFilter, FiX, FiBook, FiUser, FiClock, FiCalendar, FiHash, FiUpload, FiInfo, FiDownload } from 'react-icons/fi';
 
 // Dummy data for courses
 const dummyCourses = [
@@ -86,6 +86,29 @@ export default function CourseManagement() {
     tutorialHours: '1',
     practicalHours: '0'
   });
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false);
+  const fileInputRef = useRef(null);
+  const tooltipRef = useRef(null);
+
+  // Handle click outside for tooltip
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (tooltipRef.current && !tooltipRef.current.contains(event.target)) {
+        setShowInfoTooltip(false);
+      }
+    };
+
+    // Add event listener only when tooltip is shown
+    if (showInfoTooltip) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showInfoTooltip]);
 
   // Filter courses whenever filter parameters change
   useEffect(() => {
@@ -230,6 +253,151 @@ export default function CourseManagement() {
     setSelectedFaculty(null);
     setSearchTerm('');
   };
+  
+  // Trigger the hidden file input
+  const handleUploadClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // Handle file upload and JSON parsing
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const jsonData = JSON.parse(event.target.result);
+          
+          // Validate the JSON structure
+          if (!Array.isArray(jsonData)) {
+            throw new Error('Invalid JSON format. Expected an array of courses.');
+          }
+          
+          // Process each course in the dataset
+          const results = [];
+          const newCourses = [...courses];
+          
+          for (const course of jsonData) {
+            // Basic validation
+            if (!course.title || !course.code || !course.semester) {
+              results.push({
+                code: course.code || 'Unknown',
+                success: false,
+                error: 'Missing required fields (title, code, or semester)'
+              });
+              continue;
+            }
+            
+            try {
+              // Find faculty if specified
+              let facultyObj = null;
+              if (course.faculty) {
+                facultyObj = dummyFaculty.find(f => f.id === course.faculty || f.name === course.faculty);
+              }
+              
+              // Create new course object
+              const newCourse = {
+                id: newCourses.length + 1,
+                title: course.title,
+                code: course.code,
+                semester: course.semester,
+                weeklyHours: course.weeklyHours || '3L',
+                faculty: facultyObj
+              };
+              
+              newCourses.push(newCourse);
+              results.push({
+                code: course.code,
+                success: true
+              });
+            } catch (err) {
+              results.push({
+                code: course.code || 'Unknown',
+                success: false,
+                error: err.message
+              });
+            }
+          }
+          
+          // Update courses state
+          setCourses(newCourses);
+          
+          // Show results summary
+          const successful = results.filter(r => r.success).length;
+          if (successful === results.length) {
+            alert(`Successfully imported ${successful} courses.`);
+          } else {
+            alert(`Imported ${successful} out of ${results.length} courses. Check console for details.`);
+            console.table(results);
+          }
+          
+        } catch (err) {
+          setError(`Error parsing JSON: ${err.message}`);
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      reader.onerror = () => {
+        setError('Error reading the file');
+        setIsLoading(false);
+      };
+      
+      reader.readAsText(file);
+      
+    } catch (err) {
+      setError(err.message || 'An error occurred during file upload');
+      setIsLoading(false);
+    }
+    
+    // Reset the file input
+    e.target.value = '';
+  };
+
+  // Download example JSON dataset
+  const downloadExampleJSON = () => {
+    const exampleData = [
+      {
+        "title": "Introduction to Programming",
+        "code": "CS100",
+        "semester": "Fall 2024",
+        "weeklyHours": "3L+1T",
+        "faculty": 1
+      },
+      {
+        "title": "Web Development",
+        "code": "CS220",
+        "semester": "Spring 2025",
+        "weeklyHours": "3L+2P",
+        "faculty": 3
+      },
+      {
+        "title": "Mobile App Development",
+        "code": "CS320",
+        "semester": "Fall 2024",
+        "weeklyHours": "2L+3P",
+        "faculty": null
+      }
+    ];
+    
+    const blob = new Blob([JSON.stringify(exampleData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'courses_dataset_example.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="p-6 relative bg-gray-50 min-h-screen">
@@ -318,6 +486,67 @@ export default function CourseManagement() {
           </div>
         </div>
       </div>
+
+      {/* Floating Buttons Group */}
+      <div className="fixed bottom-8 right-8 flex flex-col gap-4">
+        {/* Upload Course Dataset Button with Info Icon */}
+        <div className="flex items-center relative group">
+          <button
+            onClick={handleUploadClick}
+            className="p-4 rounded-full bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg hover:scale-105 transition flex items-center"
+          >
+            <FiUpload size={20} className="mr-2" />
+            <span>Upload Course Dataset</span>
+          </button>
+          
+          {/* Info Icon with Tooltip */}
+          <div 
+            className="relative ml-2"
+            ref={tooltipRef}
+            onClick={() => setShowInfoTooltip(!showInfoTooltip)}
+          >
+            <button
+              className="w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100"
+            >
+              <FiInfo size={16} className="text-teal-600" />
+            </button>
+            
+            {/* Tooltip */}
+            {showInfoTooltip && (
+              <div className="absolute bottom-full right-0 mb-2 w-72 bg-white rounded-lg shadow-xl p-4 text-sm border border-gray-200 z-50">
+                <p className="font-medium mb-2 text-gray-700">JSON Dataset Format</p>
+                <p className="text-gray-600 mb-3">Upload a JSON file containing an array of courses with their details.</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    downloadExampleJSON();
+                  }}
+                  className="flex items-center text-teal-600 hover:text-teal-800 font-medium"
+                >
+                  <FiDownload size={14} className="mr-1" />
+                  Download Example Format
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".json"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+      
+      {/* Display error message if any */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <span>{error}</span>
+        </div>
+      )}
       
       {/* Courses Table */}
       <div className="bg-white rounded-2xl shadow-md overflow-hidden">
