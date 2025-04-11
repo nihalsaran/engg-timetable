@@ -19,99 +19,21 @@ import {
   FiChevronRight
 } from 'react-icons/fi';
 
-// Sample courses data (in a real app, this would come from an API)
-const coursesData = [
-  { 
-    id: 'CS101', 
-    name: 'Introduction to Computer Science', 
-    faculty: { id: 1, name: 'Dr. Alex Johnson' }, 
-    duration: 1, // in hours
-    department: 'Computer Science',
-    semester: 'Spring 2025',
-    color: 'blue',
-    weeklyHours: '3L+1T+0P'  // 3 lectures, 1 tutorial, 0 practical
-  },
-  { 
-    id: 'CS202', 
-    name: 'Data Structures and Algorithms', 
-    faculty: { id: 2, name: 'Dr. Sarah Miller' }, 
-    duration: 2, 
-    department: 'Computer Science',
-    semester: 'Spring 2025',
-    color: 'indigo',
-    weeklyHours: '3L+0T+2P'
-  },
-  { 
-    id: 'CS303', 
-    name: 'Database Systems', 
-    faculty: { id: 3, name: 'Prof. Robert Chen' }, 
-    duration: 1, 
-    department: 'Computer Science',
-    semester: 'Spring 2025',
-    color: 'purple',
-    weeklyHours: '3L+1T+2P'
-  },
-  { 
-    id: 'CS405', 
-    name: 'Artificial Intelligence', 
-    faculty: { id: 4, name: 'Dr. Emily Zhang' }, 
-    duration: 2, 
-    department: 'Computer Science',
-    semester: 'Spring 2025',
-    color: 'green',
-    weeklyHours: '4L+0T+2P'
-  },
-  { 
-    id: 'EE201', 
-    name: 'Circuit Theory', 
-    faculty: { id: 5, name: 'Prof. Maria Garcia' }, 
-    duration: 1, 
-    department: 'Electrical Engineering',
-    semester: 'Spring 2025',
-    color: 'amber',
-    weeklyHours: '3L+1T+1P'
-  },
-  { 
-    id: 'ME101', 
-    name: 'Engineering Mechanics', 
-    faculty: { id: 6, name: 'Dr. John Smith' }, 
-    duration: 1, 
-    department: 'Mechanical Engineering',
-    semester: 'Spring 2025',
-    color: 'rose',
-    weeklyHours: '3L+1T+0P'
-  },
-];
-
-// Faculty data
-const facultyData = [
-  { id: 1, name: 'Dr. Alex Johnson', department: 'Computer Science', availableSlots: ['Monday-09:00', 'Tuesday-11:00'] },
-  { id: 2, name: 'Dr. Sarah Miller', department: 'Computer Science', availableSlots: ['Wednesday-10:00', 'Friday-09:00'] },
-  { id: 3, name: 'Prof. Robert Chen', department: 'Computer Science', availableSlots: ['Monday-14:00', 'Thursday-11:00'] },
-  { id: 4, name: 'Dr. Emily Zhang', department: 'Computer Science', availableSlots: ['Tuesday-09:00', 'Friday-14:00'] },
-  { id: 5, name: 'Prof. Maria Garcia', department: 'Electrical Engineering', availableSlots: ['Wednesday-14:00', 'Thursday-09:00'] },
-  { id: 6, name: 'Dr. John Smith', department: 'Mechanical Engineering', availableSlots: ['Monday-11:00', 'Thursday-14:00'] },
-];
-
-// Room data
-const roomsData = [
-  { id: 'A101', capacity: 60, type: 'Lecture Hall', facilities: ['Projector', 'Smart Board'] },
-  { id: 'B201', capacity: 40, type: 'Classroom', facilities: ['Projector'] },
-  { id: 'C302', capacity: 30, type: 'Computer Lab', facilities: ['Computers', 'Projector'] },
-  { id: 'A105', capacity: 60, type: 'Lecture Hall', facilities: ['Projector', 'Smart Board'] },
-  { id: 'B204', capacity: 40, type: 'Classroom', facilities: ['Projector'] },
-  { id: 'D101', capacity: 80, type: 'Lecture Hall', facilities: ['Projector', 'Smart Board', 'Audio System'] },
-];
-
-// Time slots
-const timeSlots = [
-  '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
-  '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00',
-  '16:00 - 17:00', '17:00 - 18:00'
-];
-
-// Days of the week
-const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// Import services and data
+import { 
+  coursesData,
+  facultyData, 
+  roomsData, 
+  timeSlots, 
+  weekDays,
+  initializeEmptyTimetable,
+  checkConflicts,
+  addCourseToTimetable,
+  saveTimetable,
+  publishTimetable,
+  getCourseColorClass,
+  filterCourses
+} from './services/TimetableBuilder';
 
 export default function TimetableBuilder() {
   // State for filters
@@ -141,22 +63,15 @@ export default function TimetableBuilder() {
   const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Filter courses based on selected filters
-  const filteredCourses = coursesData.filter(course => {
-    if (selectedSemester && course.semester !== selectedSemester) return false;
-    if (selectedDepartment && course.department !== selectedDepartment) return false;
-    if (selectedFaculty && course.faculty.id !== selectedFaculty.id) return false;
-    return true;
+  const filteredCourses = filterCourses(coursesData, { 
+    selectedSemester, 
+    selectedDepartment, 
+    selectedFaculty 
   });
 
   // Initialize empty timetable data on component mount
   useEffect(() => {
-    const initialData = {};
-    weekDays.forEach(day => {
-      initialData[day] = {};
-      timeSlots.forEach(slot => {
-        initialData[day][slot] = null;
-      });
-    });
+    const initialData = initializeEmptyTimetable();
     setTimetableData(initialData);
     
     // Add to history
@@ -197,59 +112,15 @@ export default function TimetableBuilder() {
     setDraggedCourse(course);
   };
 
-  // Check for conflicts before dropping
-  const checkConflicts = (day, slot, course) => {
-    const newConflicts = [];
-    
-    // Check for room conflicts
-    Object.keys(timetableData).forEach(d => {
-      Object.keys(timetableData[d]).forEach(s => {
-        const existingCourse = timetableData[d][s];
-        if (existingCourse && existingCourse.room === selectedRoom.id && d === day && s === slot) {
-          newConflicts.push({
-            type: 'room',
-            message: `Room ${selectedRoom.id} already booked for ${existingCourse.id} at ${slot} on ${day}`,
-            day,
-            slot
-          });
-        }
-      });
-    });
-    
-    // Check for faculty conflicts
-    const facultyId = course.faculty.id;
-    Object.keys(timetableData).forEach(d => {
-      Object.keys(timetableData[d]).forEach(s => {
-        const existingCourse = timetableData[d][s];
-        if (existingCourse && existingCourse.faculty.id === facultyId && d === day && s === slot) {
-          newConflicts.push({
-            type: 'faculty',
-            message: `${course.faculty.name} already teaching ${existingCourse.id} at ${slot} on ${day}`,
-            day,
-            slot
-          });
-        }
-      });
-    });
-    
-    return newConflicts;
-  };
-
   // Handle drop on a timetable cell
   const handleDrop = (day, slot) => {
     if (draggedCourse) {
-      // Make a copy of the current timetable
-      const newTimetable = JSON.parse(JSON.stringify(timetableData));
-      
       // Check for conflicts
-      const newConflicts = checkConflicts(day, slot, draggedCourse);
+      const newConflicts = checkConflicts(timetableData, day, slot, draggedCourse, selectedRoom);
       setConflicts([...conflicts, ...newConflicts]);
       
-      // Add the course to the timetable with the selected room
-      newTimetable[day][slot] = {
-        ...draggedCourse,
-        room: selectedRoom.id
-      };
+      // Add the course to the timetable
+      const newTimetable = addCourseToTimetable(timetableData, day, slot, draggedCourse, selectedRoom);
       
       // Update timetable data
       setTimetableData(newTimetable);
@@ -266,13 +137,7 @@ export default function TimetableBuilder() {
   // Handle clearing a week
   const handleClearWeek = () => {
     // Create a new empty timetable
-    const newTimetable = {};
-    weekDays.forEach(day => {
-      newTimetable[day] = {};
-      timeSlots.forEach(slot => {
-        newTimetable[day][slot] = null;
-      });
-    });
+    const newTimetable = initializeEmptyTimetable();
     
     setTimetableData(newTimetable);
     setConflicts([]);
@@ -289,34 +154,23 @@ export default function TimetableBuilder() {
   };
 
   // Handle save timetable
-  const handleSaveTimetable = () => {
-    // In a real app, this would send data to a backend
-    alert('Timetable saved successfully!');
+  const handleSaveTimetable = async () => {
+    try {
+      const result = await saveTimetable(timetableData);
+      alert(result.message);
+    } catch (error) {
+      alert('Error saving timetable');
+    }
   };
 
   // Handle publish timetable
-  const handlePublishTimetable = () => {
-    if (conflicts.length > 0) {
-      alert('Please resolve all conflicts before publishing');
-      return;
+  const handlePublishTimetable = async () => {
+    try {
+      const result = await publishTimetable(timetableData, conflicts);
+      alert(result.message);
+    } catch (error) {
+      alert(error.message);
     }
-    
-    // In a real app, this would publish the timetable
-    alert('Timetable published successfully!');
-  };
-
-  // Get color class for a course
-  const getCourseColorClass = (course) => {
-    const colorMap = {
-      'blue': 'bg-blue-100 border-blue-300 text-blue-800',
-      'indigo': 'bg-indigo-100 border-indigo-300 text-indigo-800',
-      'purple': 'bg-purple-100 border-purple-300 text-purple-800',
-      'green': 'bg-green-100 border-green-300 text-green-800',
-      'amber': 'bg-amber-100 border-amber-300 text-amber-800',
-      'rose': 'bg-rose-100 border-rose-300 text-rose-800'
-    };
-    
-    return colorMap[course.color] || 'bg-gray-100 border-gray-300 text-gray-800';
   };
 
   return (
