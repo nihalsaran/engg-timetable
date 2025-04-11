@@ -1,63 +1,45 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiEdit, FiTrash2, FiSearch, FiFilter, FiX, FiHome, FiUsers, FiMonitor, FiWifi, FiThermometer, FiSave } from 'react-icons/fi';
-
-// Dummy data for rooms
-const dummyRooms = [
-  { 
-    id: 1, 
-    roomNumber: 'A101', 
-    capacity: 60, 
-    features: ['AC', 'Projector', 'SmartBoard'], 
-    department: 'Computer Science'
-  },
-  { 
-    id: 2, 
-    roomNumber: 'B201', 
-    capacity: 40, 
-    features: ['Projector', 'Wi-Fi'], 
-    department: 'Mechanical Engineering'
-  },
-  { 
-    id: 3, 
-    roomNumber: 'C302', 
-    capacity: 30, 
-    features: ['AC', 'Computers', 'SmartBoard'], 
-    department: 'Computer Science'
-  },
-  { 
-    id: 4, 
-    roomNumber: 'A105', 
-    capacity: 60, 
-    features: ['Projector', 'SmartBoard'], 
-    department: 'Electrical Engineering'
-  },
-  { 
-    id: 5, 
-    roomNumber: 'D101', 
-    capacity: 80, 
-    features: ['AC', 'Projector', 'Audio System'], 
-    department: 'Physics'
-  },
-];
-
-// Department options
-const departmentOptions = ['Computer Science', 'Mechanical Engineering', 'Electrical Engineering', 'Civil Engineering', 'Physics', 'Mathematics'];
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { FiPlus, FiEdit, FiTrash2, FiSearch, FiX, FiHome, FiUsers, FiMonitor, FiWifi, FiThermometer, FiSave } from 'react-icons/fi';
+import { 
+  getRooms, 
+  addRoom, 
+  updateRoom, 
+  deleteRoom, 
+  filterRooms, 
+  departmentOptions, 
+  featureOptions as serviceFeatureOptions,
+  getDepartmentColorClass 
+} from './services/RoomManagement';
 
 // Feature options with icons
-const featureOptions = [
-  { id: 'AC', name: 'AC', icon: <FiThermometer /> },
-  { id: 'Projector', name: 'Projector', icon: <FiMonitor /> },
-  { id: 'SmartBoard', name: 'SmartBoard', icon: <FiMonitor /> },
-  { id: 'Wi-Fi', name: 'Wi-Fi', icon: <FiWifi /> },
-  { id: 'Computers', name: 'Computers', icon: <FiMonitor /> },
-  { id: 'Audio System', name: 'Audio System', icon: <FiUsers /> }
-];
+const featureOptions = serviceFeatureOptions.map(feature => {
+  let icon;
+  switch (feature.id) {
+    case 'AC': 
+      icon = <FiThermometer />;
+      break;
+    case 'Projector':
+    case 'SmartBoard':
+    case 'Computers':
+      icon = <FiMonitor />;
+      break;
+    case 'Wi-Fi':
+      icon = <FiWifi />;
+      break;
+    case 'Audio System':
+      icon = <FiUsers />;
+      break;
+    default:
+      icon = <FiHome size={12} />;
+  }
+  return { ...feature, icon };
+});
 
 export default function RoomManagement() {
   // State variables
-  const [rooms, setRooms] = useState(dummyRooms);
-  const [filteredRooms, setFilteredRooms] = useState(rooms);
+  const [rooms, setRooms] = useState([]);
+  const [filteredRooms, setFilteredRooms] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedFeature, setSelectedFeature] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,29 +52,20 @@ export default function RoomManagement() {
     department: 'Computer Science'
   });
 
+  // Initialize rooms on component mount
+  useEffect(() => {
+    const allRooms = getRooms();
+    setRooms(allRooms);
+    setFilteredRooms(allRooms);
+  }, []);
+
   // Filter rooms whenever filter parameters change
-  useState(() => {
-    let filtered = [...rooms];
-    
-    // Apply department filter
-    if (selectedDepartment) {
-      filtered = filtered.filter(room => room.department === selectedDepartment);
-    }
-    
-    // Apply feature filter
-    if (selectedFeature) {
-      filtered = filtered.filter(room => room.features.includes(selectedFeature));
-    }
-    
-    // Apply search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(room => 
-        room.roomNumber.toLowerCase().includes(term) || 
-        room.department.toLowerCase().includes(term)
-      );
-    }
-    
+  useEffect(() => {
+    const filtered = filterRooms(rooms, {
+      department: selectedDepartment,
+      feature: selectedFeature,
+      searchTerm: searchTerm
+    });
     setFilteredRooms(filtered);
   }, [rooms, selectedDepartment, selectedFeature, searchTerm]);
 
@@ -143,35 +116,26 @@ export default function RoomManagement() {
     
     if (editingRoom) {
       // Update existing room
-      const updatedRooms = rooms.map(room => 
-        room.id === editingRoom.id ? 
-        {
-          ...room,
-          roomNumber: formData.roomNumber,
-          capacity: parseInt(formData.capacity),
-          features: formData.features,
-          department: formData.department
-        } : room
-      );
-      setRooms(updatedRooms);
+      const updatedRoom = updateRoom(editingRoom.id, formData);
+      if (updatedRoom) {
+        setRooms(getRooms());
+      }
     } else {
       // Add new room
-      const newRoom = {
-        id: rooms.length + 1,
-        roomNumber: formData.roomNumber,
-        capacity: parseInt(formData.capacity),
-        features: formData.features,
-        department: formData.department
-      };
-      setRooms([...rooms, newRoom]);
+      const newRoom = addRoom(formData);
+      if (newRoom) {
+        setRooms(getRooms());
+      }
     }
     setShowModal(false);
   };
 
   // Delete a room
   const handleDeleteRoom = (id) => {
-    const updatedRooms = rooms.filter(room => room.id !== id);
-    setRooms(updatedRooms);
+    const success = deleteRoom(id);
+    if (success) {
+      setRooms(getRooms());
+    }
   };
 
   // Reset all filters
@@ -179,26 +143,6 @@ export default function RoomManagement() {
     setSelectedDepartment('');
     setSelectedFeature('');
     setSearchTerm('');
-  };
-
-  // Badge color mapping for departments
-  const getDepartmentColorClass = (department) => {
-    switch (department) {
-      case 'Computer Science':
-        return 'bg-blue-100 text-blue-800';
-      case 'Mechanical Engineering':
-        return 'bg-red-100 text-red-800';
-      case 'Electrical Engineering':
-        return 'bg-amber-100 text-amber-800';
-      case 'Civil Engineering':
-        return 'bg-green-100 text-green-800';
-      case 'Physics':
-        return 'bg-purple-100 text-purple-800';
-      case 'Mathematics':
-        return 'bg-indigo-100 text-indigo-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
   };
 
   return (
