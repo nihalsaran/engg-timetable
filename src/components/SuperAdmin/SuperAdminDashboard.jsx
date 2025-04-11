@@ -1,20 +1,36 @@
-import React from 'react';
-import { FiUsers, FiCalendar, FiAlertTriangle, FiActivity } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiUsers, FiCalendar, FiAlertTriangle } from 'react-icons/fi';
 import { BsBuilding } from 'react-icons/bs';
+import { 
+  getDashboardMetrics, 
+  getRecentActivity, 
+  getSemesterProgress,
+  addNewUser,
+  generateReport,
+  manageSemester
+} from './services/SuperAdminDashboard';
 
 export default function SuperAdminDashboard() {
-  // Mock data for the dashboard
-  const recentActivity = [
-    { id: 1, user: "Dr. Smith", action: "Modified CS101 Schedule", time: "10 mins ago" },
-    { id: 2, user: "Prof. Johnson", action: "Requested room change", time: "1 hour ago" },
-    { id: 3, user: "Admin Lee", action: "Added new faculty", time: "3 hours ago" },
-    { id: 4, user: "Dr. Patel", action: "Updated office hours", time: "5 hours ago" },
-  ];
+  const [metrics, setMetrics] = useState({
+    totalUsers: 0,
+    totalDepartments: 0,
+    activeSemesters: 0,
+    conflictsToday: 0
+  });
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [semesterProgress, setSemesterProgress] = useState([]);
+  
+  useEffect(() => {
+    // Fetch dashboard data
+    setMetrics(getDashboardMetrics());
+    setRecentActivity(getRecentActivity());
+    setSemesterProgress(getSemesterProgress());
+  }, []);
 
-  const semesterProgress = [
-    { id: 1, name: "Spring 2025", progress: 65, startDate: "Jan 15", endDate: "May 30" },
-    { id: 2, name: "Summer 2025", progress: 10, startDate: "Jun 15", endDate: "Aug 30" },
-  ];
+  // Event handlers
+  const handleAddNewUser = () => addNewUser();
+  const handleGenerateReport = () => generateReport();
+  const handleManageSemester = () => manageSemester();
 
   return (
     <div className="space-y-6">
@@ -26,7 +42,7 @@ export default function SuperAdminDashboard() {
           </div>
           <div>
             <h2 className="text-sm text-gray-500 font-medium">Total Users</h2>
-            <p className="text-2xl font-bold">120</p>
+            <p className="text-2xl font-bold">{metrics.totalUsers}</p>
           </div>
         </div>
         
@@ -36,7 +52,7 @@ export default function SuperAdminDashboard() {
           </div>
           <div>
             <h2 className="text-sm text-gray-500 font-medium">Total Departments</h2>
-            <p className="text-2xl font-bold">8</p>
+            <p className="text-2xl font-bold">{metrics.totalDepartments}</p>
           </div>
         </div>
         
@@ -46,7 +62,7 @@ export default function SuperAdminDashboard() {
           </div>
           <div>
             <h2 className="text-sm text-gray-500 font-medium">Active Semesters</h2>
-            <p className="text-2xl font-bold">2</p>
+            <p className="text-2xl font-bold">{metrics.activeSemesters}</p>
           </div>
         </div>
         
@@ -56,7 +72,7 @@ export default function SuperAdminDashboard() {
           </div>
           <div>
             <h2 className="text-sm text-gray-500 font-medium">Conflicts Today</h2>
-            <p className="text-2xl font-bold">3</p>
+            <p className="text-2xl font-bold">{metrics.conflictsToday}</p>
           </div>
         </div>
       </div>
@@ -116,13 +132,19 @@ export default function SuperAdminDashboard() {
 
       {/* Call-to-Action Buttons */}
       <div className="flex flex-wrap gap-4 justify-center mt-8">
-        <button className="px-6 py-3 rounded-full bg-gradient-to-r from-indigo-500 to-teal-500 text-white font-semibold hover:opacity-90 transition flex items-center gap-2">
+        <button 
+          onClick={handleAddNewUser}
+          className="px-6 py-3 rounded-full bg-gradient-to-r from-indigo-500 to-teal-500 text-white font-semibold hover:opacity-90 transition flex items-center gap-2">
           <span>➕</span> Add New User
         </button>
-        <button className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold hover:opacity-90 transition flex items-center gap-2">
+        <button 
+          onClick={handleGenerateReport}
+          className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold hover:opacity-90 transition flex items-center gap-2">
           <span>📊</span> Generate Report
         </button>
-        <button className="px-6 py-3 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 transition flex items-center gap-2">
+        <button 
+          onClick={handleManageSemester}
+          className="px-6 py-3 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 transition flex items-center gap-2">
           <span>⚙️</span> Manage Semester
         </button>
       </div>
