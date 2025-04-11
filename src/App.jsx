@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import Login from './components/Login'
-import ForgotPassword from './components/ForgotPassword'
+import Login from './components/Auth/Login'
+import ForgotPassword from './components/Auth/ForgotPassword'
 import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard'
 import UserManagement from './components/SuperAdmin/UserManagement'
 import TeacherManagement from './components/SuperAdmin/TeacherManagement'

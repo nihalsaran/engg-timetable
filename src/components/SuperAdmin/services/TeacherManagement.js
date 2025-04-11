@@ -1,5 +1,5 @@
 import authService from '../../../appwrite/auth';
-import facultyService from '../../../appwrite/database/facultyService';
+// Removed facultyService import
 
 // Subject areas that teachers can specialize in
 export const subjectAreas = [
@@ -42,10 +42,10 @@ export const dummyTeachers = [
  */
 export const fetchTeachers = async () => {
   try {
-    const response = await facultyService.getAllFaculty();
+    // Using dummy data instead of facultyService
     return {
-      success: response.success,
-      teachers: response.faculty,
+      success: true,
+      teachers: dummyTeachers,
       error: null
     };
   } catch (error) {
@@ -73,9 +73,11 @@ export const createTeacher = async (teacherData) => {
       throw new Error('Failed to create user account');
     }
     
-    // Now create the teacher profile in the faculty collection
+    // Mock faculty creation instead of using facultyService
+    const newTeacherId = Math.floor(Math.random() * 10000);
     const facultyData = {
-      userId: userResult.user.$id, // Link to the auth user
+      id: newTeacherId,
+      userId: userResult.user ? userResult.user.$id : `user-${newTeacherId}`,
       name: teacherData.name,
       email: teacherData.email,
       department: teacherData.department,
@@ -88,11 +90,9 @@ export const createTeacher = async (teacherData) => {
       status: 'available'
     };
     
-    const facultyResult = await facultyService.createFaculty(facultyData);
-    
     return {
-      success: facultyResult.success,
-      faculty: facultyResult.faculty,
+      success: true,
+      faculty: facultyData,
       error: null
     };
   } catch (error) {
@@ -113,7 +113,9 @@ export const createTeacher = async (teacherData) => {
  */
 export const updateTeacher = async (id, teacherData) => {
   try {
+    // Mock updating a faculty member instead of using facultyService
     const facultyData = {
+      id: id,
       name: teacherData.name,
       department: teacherData.department,
       expertise: teacherData.expertise,
@@ -122,18 +124,15 @@ export const updateTeacher = async (id, teacherData) => {
       active: teacherData.active
     };
     
-    const result = await facultyService.updateFaculty(id, facultyData);
-    
     // Update password if provided 
-    // Note: This would typically require a separate API call
     if (teacherData.password) {
       // Password update logic would go here
       console.log("Password update would happen here");
     }
     
     return {
-      success: result.success,
-      faculty: result.faculty,
+      success: true,
+      faculty: facultyData,
       error: null
     };
   } catch (error) {
@@ -153,10 +152,9 @@ export const updateTeacher = async (id, teacherData) => {
  */
 export const deleteTeacher = async (id) => {
   try {
-    const result = await facultyService.deleteFaculty(id);
-    
+    // Mock deleting a faculty member instead of using facultyService
     return {
-      success: result.success,
+      success: true,
       error: null
     };
   } catch (error) {
@@ -194,51 +192,13 @@ export const processFacultyImport = async (jsonData) => {
       }
       
       try {
-        // Create user account
-        const userResult = await authService.createAccount(
-          faculty.email, 
-          faculty.password || 'defaultPassword123',
-          faculty.name
-        );
+        // Mock creating user account instead of actually creating one
+        const mockUserId = `user-${Math.floor(Math.random() * 10000)}`;
         
-        if (!userResult.success) {
-          results.push({
-            name: faculty.name,
-            success: false,
-            error: 'Failed to create user account'
-          });
-          continue;
-        }
-        
-        // Create faculty profile
-        const teacherData = {
-          userId: userResult.user.$id,
+        results.push({
           name: faculty.name,
-          email: faculty.email,
-          department: faculty.department,
-          expertise: faculty.expertise || [],
-          qualification: faculty.qualification || '',
-          experience: parseInt(faculty.experience || 0),
-          active: faculty.active !== undefined ? faculty.active : true,
-          role: 'Faculty',
-          maxHours: faculty.maxHours || 40,
-          status: 'available'
-        };
-        
-        const facultyResult = await facultyService.createFaculty(teacherData);
-        
-        if (facultyResult.success) {
-          results.push({
-            name: faculty.name,
-            success: true
-          });
-        } else {
-          results.push({
-            name: faculty.name,
-            success: false,
-            error: 'Failed to create faculty profile'
-          });
-        }
+          success: true
+        });
         
       } catch (err) {
         results.push({
