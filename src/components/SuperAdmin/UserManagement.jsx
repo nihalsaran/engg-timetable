@@ -1,21 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiUser, FiUsers, FiShield } from 'react-icons/fi';
-
-const dummyUsers = [
-  { id: 1, name: 'Alice Johnson', email: 'alice@univ.edu', role: 'HOD', department: 'Computer Science', active: true },
-  { id: 2, name: 'Bob Smith', email: 'bob@univ.edu', role: 'TT Incharge', department: 'Electrical Engineering', active: true },
-  { id: 3, name: 'Charlie Brown', email: 'charlie@univ.edu', role: 'Faculty', department: 'Mechanical Engineering', active: false },
-];
-
-const departments = [
-  'Computer Science', 
-  'Electrical Engineering', 
-  'Mechanical Engineering',
-  'Civil Engineering',
-  'Chemical Engineering'
-];
+import { 
+  getUsers, 
+  getDepartments, 
+  createUser, 
+  updateUser, 
+  deleteUser,
+  getInitials,
+  getAvatarBg,
+  getRoleBadgeColor
+} from './services/UserManagement';
 
 export default function UserManagement() {
+  const [users, setUsers] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ 
     name: '', 
@@ -27,6 +25,13 @@ export default function UserManagement() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
+  // Load data on component mount
+  useEffect(() => {
+    // Get users and departments from service
+    setUsers(getUsers());
+    setDepartments(getDepartments());
+  }, []);
 
   const openModal = (user = null) => {
     if (user) {
@@ -65,7 +70,17 @@ export default function UserManagement() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Saved user:', formData, 'Editing ID:', editingId);
+    
+    if (editingId) {
+      // Update existing user
+      const updatedUser = updateUser(editingId, formData);
+      setUsers(users.map(user => user.id === editingId ? updatedUser : user));
+    } else {
+      // Create new user
+      const newUser = createUser(formData);
+      setUsers([...users, newUser]);
+    }
+    
     closeModal();
   };
 
@@ -74,17 +89,8 @@ export default function UserManagement() {
   };
 
   const handleDelete = (id) => {
-    console.log('Delete user with id:', id);
-    // Implement delete logic here
-  };
-
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case 'HOD': return 'bg-indigo-100 text-indigo-800';
-      case 'TT Incharge': return 'bg-purple-100 text-purple-800';
-      case 'Faculty': return 'bg-green-100 text-green-700';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    deleteUser(id);
+    setUsers(users.filter(user => user.id !== id));
   };
 
   const getRoleIcon = (role) => {
@@ -94,30 +100,6 @@ export default function UserManagement() {
       case 'Faculty': return <FiUser className="mr-1" />;
       default: return null;
     }
-  };
-
-  // Generate avatar initials from name
-  const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
-
-  // Generate background color for avatar based on name
-  const getAvatarBg = (name) => {
-    const colors = [
-      'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 
-      'bg-red-500', 'bg-orange-500', 'bg-amber-500',
-      'bg-yellow-500', 'bg-lime-500', 'bg-green-500',
-      'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500',
-      'bg-sky-500', 'bg-blue-500', 'bg-violet-500'
-    ];
-    
-    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[hash % colors.length];
   };
 
   return (
@@ -138,7 +120,7 @@ export default function UserManagement() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {dummyUsers.map((user, idx) => (
+            {users.map((user, idx) => (
               <tr key={user.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
