@@ -465,53 +465,69 @@ export default function TimetableBuilder() {
         </div>
         
         {/* Center Panel: Timetable Grid */}
-        <div className="flex-1 bg-white rounded-2xl shadow-md p-4 overflow-x-auto">
+        <div className="bg-white rounded-2xl shadow-md p-4 overflow-hidden flex-1" style={{ maxWidth: 'calc(100% - 500px)', width: '100%' }}>
           {/* Tabs */}
-          <div className="flex items-center gap-2 mb-4 border-b pb-3">
-            {tabs.map(tab => (
-              <div 
-                key={tab.id} 
-                className={`flex items-center gap-2 px-4 py-2 rounded-t-lg cursor-pointer ${tab.isActive ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-                onClick={() => switchTab(tab.id)}
-              >
-                {isEditingTab === tab.id ? (
-                  <div ref={tabEditRef} className="flex items-center gap-2">
-                    <input 
-                      type="text" 
-                      value={editTabName} 
-                      onChange={(e) => setEditTabName(e.target.value)} 
-                      className="px-2 py-1 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                    />
-                    <button onClick={saveTabName} className="text-gray-700 hover:text-gray-900">
-                      <FiCheck />
-                    </button>
+          <div className="mb-4 border-b pb-3 w-full">
+            <div className="flex w-full overflow-hidden">
+              <div className="flex flex-nowrap items-center gap-1 w-full">
+                {tabs.map(tab => (
+                  <div 
+                    key={tab.id} 
+                    className={`flex items-center gap-1 px-3 py-2 rounded-t-lg cursor-pointer min-w-0
+                      ${tab.isActive ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    style={{ 
+                      flexBasis: `${Math.max(50, Math.min(180, 220 - (tabs.length * 15)))}px`,
+                      flexGrow: tab.isActive ? 0.5 : 0,
+                      flexShrink: 1
+                    }}
+                    onClick={() => switchTab(tab.id)}
+                  >
+                    {isEditingTab === tab.id ? (
+                      <div ref={tabEditRef} className="flex items-center gap-2">
+                        <input 
+                          type="text" 
+                          value={editTabName} 
+                          onChange={(e) => setEditTabName(e.target.value)} 
+                          className="px-2 py-1 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        />
+                        <button onClick={saveTabName} className="text-gray-700 hover:text-gray-900">
+                          <FiCheck />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="truncate block flex-1 text-sm">{tab.name}</span>
+                        <div className={`flex items-center gap-1 flex-shrink-0 ${tabs.length > 5 ? 'ml-1' : 'ml-2'}`}>
+                          <button 
+                            onClick={(e) => startEditingTab(tab.id, e)} 
+                            className={`text-gray-400 hover:text-gray-600 ${tabs.length > 5 ? 'hidden' : ''}`}
+                          >
+                            <FiEdit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={(e) => closeTab(tab.id, e)} 
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <FiX size={tabs.length > 5 ? 12 : 14} />
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    <span>{tab.name}</span>
-                    <button 
-                      onClick={(e) => startEditingTab(tab.id, e)} 
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <FiEdit2 />
-                    </button>
-                    <button 
-                      onClick={(e) => closeTab(tab.id, e)} 
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <FiX />
-                    </button>
-                  </>
-                )}
+                ))}
+                <button 
+                  onClick={addNewTab} 
+                  className="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-1 flex-shrink-0 ml-1"
+                  style={{ 
+                    width: tabs.length > 5 ? '32px' : 'auto',
+                    minWidth: tabs.length > 5 ? '32px' : '60px'
+                  }}
+                >
+                  <FiPlus size={14} />
+                  <span className={`${tabs.length > 5 ? 'sr-only' : 'text-sm'}`}>New Tab</span>
+                </button>
               </div>
-            ))}
-            <button 
-              onClick={addNewTab} 
-              className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 flex items-center gap-2"
-            >
-              <FiPlus />
-              <span>New Tab</span>
-            </button>
+            </div>
           </div>
 
           <div className="flex justify-between items-center mb-4">
