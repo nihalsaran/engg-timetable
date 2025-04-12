@@ -40,7 +40,7 @@ import {
 export default function TimetableBuilder() {
   // State for multiple timetable tabs
   const [tabs, setTabs] = useState([
-    { id: 1, name: "CSE Timetable", isActive: true },
+    { id: 1, name: "CSE Timetable", isActive: true, width: 100 },
   ]);
   const [activeTabId, setActiveTabId] = useState(1);
   const [nextTabId, setNextTabId] = useState(2);
@@ -521,9 +521,10 @@ export default function TimetableBuilder() {
                     className={`flex items-center gap-1 px-3 py-2 rounded-t-lg cursor-pointer min-w-0
                       ${tab.isActive ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                     style={{ 
-                      flexBasis: `${Math.max(50, Math.min(180, 220 - (tabs.length * 15)))}px`,
-                      flexGrow: tab.isActive ? 0.5 : 0,
-                      flexShrink: 1
+                      width: '130px',
+                      maxWidth: '130px',
+                      flexGrow: 0,
+                      flexShrink: 0
                     }}
                     onClick={() => switchTab(tab.id)}
                   >
