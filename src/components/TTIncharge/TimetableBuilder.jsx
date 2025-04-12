@@ -68,6 +68,7 @@ export default function TimetableBuilder() {
   // Dragging state
   const [isDragging, setIsDragging] = useState(false);
   const [draggedCourse, setDraggedCourse] = useState(null);
+  const [dragSourceInfo, setDragSourceInfo] = useState(null);
   
   // History for undo/redo - now an object with tabId as keys
   const [historyData, setHistoryData] = useState({});
@@ -234,24 +235,67 @@ export default function TimetableBuilder() {
     }
   };
 
-  // Handle drag start
-  const handleDragStart = (course) => {
+  // Handle drag start - from course list or timetable
+  const handleDragStart = (course, fromTimetable = false, day = null, slot = null) => {
     setIsDragging(true);
     setDraggedCourse(course);
+    
+    if (fromTimetable) {
+      setDragSourceInfo({ day, slot });
+    } else {
+      setDragSourceInfo(null);
+    }
+  };
+
+  // Handle delete course from timetable
+  const handleDeleteCourse = (day, slot, e) => {
+    e.stopPropagation(); // Prevent drag events from triggering
+    
+    const newTimetable = JSON.parse(JSON.stringify(timetableData));
+    newTimetable[day][slot] = null;
+    
+    setTimetablesData(prev => ({ ...prev, [activeTabId]: newTimetable }));
+    
+    // Filter conflicts related to this cell if any
+    const newConflicts = conflicts.filter(
+      conflict => !(conflict.day === day && conflict.slot === slot)
+    );
+    setConflictsData(prev => ({ ...prev, [activeTabId]: newConflicts }));
+    
+    // Add to history
+    addToHistory(activeTabId, newTimetable);
   };
 
   // Handle drop on a timetable cell
   const handleDrop = (day, slot) => {
     if (draggedCourse) {
-      // Check for conflicts
-      const newConflicts = checkConflicts(timetableData, day, slot, draggedCourse, selectedRoom);
+      const newTimetable = JSON.parse(JSON.stringify(timetableData));
+      
+      // If this is a re-drag from another cell, remove the course from its original position
+      if (dragSourceInfo) {
+        newTimetable[dragSourceInfo.day][dragSourceInfo.slot] = null;
+        
+        // Remove any conflicts associated with the source position
+        const updatedConflicts = conflicts.filter(
+          c => !(c.day === dragSourceInfo.day && c.slot === dragSourceInfo.slot)
+        );
+        setConflictsData(prev => ({ ...prev, [activeTabId]: updatedConflicts }));
+      }
+      
+      // Check for conflicts at the destination
+      const newConflicts = checkConflicts(newTimetable, day, slot, draggedCourse, selectedRoom);
       setConflictsData(prev => ({ 
         ...prev, 
-        [activeTabId]: [...(prev[activeTabId] || []), ...newConflicts]
+        [activeTabId]: [...(prev[activeTabId] || []).filter(
+          c => !(c.day === day && c.slot === slot)
+        ), ...newConflicts]
       }));
       
       // Add the course to the timetable
-      const newTimetable = addCourseToTimetable(timetableData, day, slot, draggedCourse, selectedRoom);
+      newTimetable[day][slot] = {
+        ...draggedCourse,
+        room: selectedRoom.id
+      };
       
       // Update timetable data
       setTimetablesData(prev => ({ ...prev, [activeTabId]: newTimetable }));
@@ -262,6 +306,7 @@ export default function TimetableBuilder() {
       // Reset dragging state
       setIsDragging(false);
       setDraggedCourse(null);
+      setDragSourceInfo(null);
     }
   };
 
@@ -621,9 +666,18 @@ export default function TimetableBuilder() {
                           >
                             {courseInSlot ? (
                               <div 
-                                className={`p-2 rounded-lg ${getCourseColorClass(courseInSlot)} border cursor-pointer relative max-w-[120px] mx-auto
+                                className={`p-2 rounded-lg ${getCourseColorClass(courseInSlot)} border cursor-grab relative max-w-[120px] mx-auto group
                                           ${hasConflict ? 'ring-2 ring-red-500 animate-pulse' : ''}`}
+                                draggable
+                                onDragStart={() => handleDragStart(courseInSlot, true, day, slot)}
                               >
+                                <button 
+                                  onClick={(e) => handleDeleteCourse(day, slot, e)}
+                                  className="absolute top-0 right-0 -mt-2 -mr-2 text-gray-500 hover:text-red-600 transition opacity-0 group-hover:opacity-100 bg-white rounded-full w-5 h-5 flex items-center justify-center shadow-md"
+                                  title="Remove course"
+                                >
+                                  <FiX size={12} />
+                                </button>
                                 <div className="flex justify-between items-start">
                                   <span className="font-semibold text-xs">{courseInSlot.id}</span>
                                   {hasConflict && (
@@ -631,7 +685,9 @@ export default function TimetableBuilder() {
                                   )}
                                 </div>
                                 <h3 className="text-xs mt-0.5 font-medium line-clamp-1">{courseInSlot.name}</h3>
-                                <div className="text-xs mt-1">{courseInSlot.room}</div>
+                                <div className="text-xs mt-1">
+                                  <span>{courseInSlot.room}</span>
+                                </div>
                               </div>
                             ) : (
                               <div 
@@ -661,9 +717,18 @@ export default function TimetableBuilder() {
                           >
                             {courseInSlot ? (
                               <div 
-                                className={`p-3 rounded-lg ${getCourseColorClass(courseInSlot)} border cursor-pointer relative max-w-[320px] mx-auto
+                                className={`p-3 rounded-lg ${getCourseColorClass(courseInSlot)} border cursor-grab relative max-w-[320px] mx-auto group
                                           ${hasConflict ? 'ring-2 ring-red-500 animate-pulse' : ''}`}
+                                draggable
+                                onDragStart={() => handleDragStart(courseInSlot, true, currentDay, slot)}
                               >
+                                <button 
+                                  onClick={(e) => handleDeleteCourse(currentDay, slot, e)}
+                                  className="absolute top-0 right-0 -mt-2 -mr-2 text-gray-600 hover:text-red-600 transition opacity-0 group-hover:opacity-100 bg-white rounded-full w-5 h-5 flex items-center justify-center shadow-md"
+                                  title="Remove course"
+                                >
+                                  <FiX size={14} />
+                                </button>
                                 <div className="flex justify-between items-start">
                                   <span className="font-semibold text-sm">{courseInSlot.id}</span>
                                   {hasConflict && (
@@ -671,9 +736,11 @@ export default function TimetableBuilder() {
                                   )}
                                 </div>
                                 <h3 className="text-sm mt-1 font-medium line-clamp-1">{courseInSlot.name}</h3>
-                                <div className="flex justify-between mt-2 text-xs">
-                                  <span className="truncate">{courseInSlot.faculty.name}</span>
-                                  <span>Room: {courseInSlot.room}</span>
+                                <div className="text-xs mt-2">
+                                  <div className="flex justify-between">
+                                    <span className="truncate">{courseInSlot.faculty.name}</span>
+                                    <span>Room: {courseInSlot.room}</span>
+                                  </div>
                                 </div>
                               </div>
                             ) : (
