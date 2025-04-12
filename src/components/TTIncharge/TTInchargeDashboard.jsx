@@ -40,22 +40,22 @@ export default function TTInchargeDashboard() {
   
   // Handle navigation to builder
   const navigateToBuilder = () => {
-    navigate('/timetable-builder');
+    navigate('/tt/timetable-builder');
   };
   
   // Handle navigation to conflicts
   const navigateToConflicts = () => {
-    navigate('/conflicts');
+    navigate('/tt/conflicts');
   };
 
   // Handle navigation to room availability
   const navigateToRoomAvailability = () => {
-    navigate('/room-availability');
+    navigate('/tt/rooms');
   };
   
   // Handle navigation to faculty timetable
   const navigateToFacultyTimetable = () => {
-    navigate('/faculty-timetable');
+    navigate('/tt/faculty-timetable');
   };
   
   // Handle publish timetable
