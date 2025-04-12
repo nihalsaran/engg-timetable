@@ -33,25 +33,25 @@ export default function HODLayout() {
   // Set active item based on current path
   useEffect(() => {
     const path = location.pathname;
-    if (path.includes('hod-dashboard')) {
+    if (path.includes('/hod/dashboard')) {
       setActiveSidebarItem('Dashboard');
-    } else if (path.includes('courses')) {
+    } else if (path.includes('/hod/courses')) {
       setActiveSidebarItem('Courses');
-    } else if (path.includes('faculty')) {
-      setActiveSidebarItem('Faculty');
-    } else if (path.includes('reports')) {
+    } else if (path.includes('/hod/assign-faculty')) {
+      setActiveSidebarItem('Assign-Course');
+    } else if (path.includes('/hod/reports')) {
       setActiveSidebarItem('Reports');
-    } else if (path.includes('timetable')) {
+    } else if (path.includes('/hod/timetable')) {
       setActiveSidebarItem('Timetable');
     }
   }, [location]);
   
   const sidebarItems = [
-    { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/hod-dashboard' },
-    { label: 'Courses', icon: <FiBook size={18} />, path: '/courses' },
-    { label: 'Assign-Course', icon: <FiUsers size={18} />, path: '/assign-faculty' },
-    { label: 'Reports', icon: <FiFileText size={18} />, path: '/hod-reports' },
-    { label: 'Timetable', icon: <FiCalendar size={18} />, path: '/timetable' },
+    { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/hod/dashboard' },
+    { label: 'Courses', icon: <FiBook size={18} />, path: '/hod/courses' },
+    { label: 'Assign-Course', icon: <FiUsers size={18} />, path: '/hod/assign-faculty' },
+    { label: 'Reports', icon: <FiFileText size={18} />, path: '/hod/reports' },
+    { label: 'Timetable', icon: <FiCalendar size={18} />, path: '/hod/timetable' },
   ];
 
   const handleNavigation = (path, label) => {

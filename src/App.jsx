@@ -32,32 +32,34 @@ function App() {
 
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        <Route element={<HODLayout />}>
-          <Route path="/hod-dashboard" element={<HODDashboard />} />
-          <Route path="/courses" element={<CourseManagement />} />
-          <Route path="/assign-faculty" element={<FacultyAssignment />} />
-          <Route path="/hod-reports" element={<FacultyLoadReports/>} />
-          <Route path="/timetable" element={<TimetableViewer />} />
+        {/* HOD Routes with /hod/* path prefix */}
+        <Route path="/hod/*" element={<HODLayout />}>
+          <Route path="dashboard" element={<HODDashboard />} />
+          <Route path="courses" element={<CourseManagement />} />
+          <Route path="assign-faculty" element={<FacultyAssignment />} />
+          <Route path="reports" element={<FacultyLoadReports/>} />
+          <Route path="timetable" element={<TimetableViewer />} />
         </Route>
 
-        {/* TT Incharge Routes */}
-        <Route element={<TTInchargeLayout />}>
-          <Route path="/tt-dashboard" element={<TTInchargeDashboard />} />
-          <Route path="/timetable-builder" element={<TimetableBuilder/> } />
-          <Route path="/conflicts" element={<Conflicts />} />
-          <Route path="/rooms" element={<RoomAvailability />} />
-          <Route path="/room-availability" element={<RoomAvailability />} />
-          <Route path="/faculty-timetable" element={<FacultyTimetable />} />
+        {/* TT Incharge Routes with /tt/* path prefix */}
+        <Route path="/tt/*" element={<TTInchargeLayout />}>
+          <Route path="dashboard" element={<TTInchargeDashboard />} />
+          <Route path="timetable-builder" element={<TimetableBuilder/> } />
+          <Route path="conflicts" element={<Conflicts />} />
+          <Route path="rooms" element={<RoomAvailability />} />
+          <Route path="room-availability" element={<RoomAvailability />} />
+          <Route path="faculty-timetable" element={<FacultyTimetable />} />
         </Route>
 
-        <Route path="/" element={<SuperAdminLayout />}>
-          <Route path="/admin-dashboard" element={<SuperAdminDashboard />} />
-          <Route path="/users" element={<UserManagement />} />
-          <Route path="/faculty" element={<TeacherManagement />} />
-          <Route path="/departments" element={<DepartmentManagement />} />
-          <Route path="/admin-rooms" element={<RoomManagement />} />
-          <Route path="/superadmin-reports" element={<ReportsAnalytics />} />
-          <Route path="/settings" element={<SettingsSemester />} />
+        {/* SuperAdmin Routes with /admin/* path prefix */}
+        <Route path="/admin/*" element={<SuperAdminLayout />}>
+          <Route path="dashboard" element={<SuperAdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="faculty" element={<TeacherManagement />} />
+          <Route path="departments" element={<DepartmentManagement />} />
+          <Route path="rooms" element={<RoomManagement />} />
+          <Route path="reports" element={<ReportsAnalytics />} />
+          <Route path="settings" element={<SettingsSemester />} />
         </Route>
       </Routes>
     </Router>

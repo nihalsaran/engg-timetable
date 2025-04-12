@@ -53,17 +53,17 @@ export default function TTInchargeLayout() {
   // Set active item based on current path
   useEffect(() => {
     const path = location.pathname;
-    if (path.includes('tt-dashboard')) {
+    if (path.includes('/tt/dashboard')) {
       setActiveSidebarItem('Dashboard');
-    } else if (path.includes('timetable-builder')) {
+    } else if (path.includes('/tt/timetable-builder')) {
       setActiveSidebarItem('Timetable Builder');
-    } else if (path.includes('conflicts')) {
+    } else if (path.includes('/tt/conflicts')) {
       setActiveSidebarItem('Conflicts');
-    } else if (path.includes('rooms')) {
+    } else if (path.includes('/tt/rooms')) {
       setActiveSidebarItem('Rooms');
-    } else if (path.includes('faculty-view')) {
+    } else if (path.includes('/tt/faculty-view')) {
       setActiveSidebarItem('Faculty View');
-    } else if (path.includes('faculty-timetable')) {
+    } else if (path.includes('/tt/faculty-timetable')) {
       setActiveSidebarItem('Faculty Timetable');
     }
   }, [location]);
@@ -73,11 +73,11 @@ export default function TTInchargeLayout() {
   };
   
   const sidebarItems = [
-    { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/tt-dashboard' },
-    { label: 'Timetable Builder', icon: <FiCalendar size={18} />, path: '/timetable-builder' },
-    { label: 'Conflicts', icon: <FiAlertCircle size={18} />, path: '/conflicts' },
-    { label: 'Rooms', icon: <FiHome size={18} />, path: '/rooms' },
-    { label: 'Faculty View', icon: <FiUsers size={18} />, path: '/faculty-timetable' },
+    { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/tt/dashboard' },
+    { label: 'Timetable Builder', icon: <FiCalendar size={18} />, path: '/tt/timetable-builder' },
+    { label: 'Conflicts', icon: <FiAlertCircle size={18} />, path: '/tt/conflicts' },
+    { label: 'Rooms', icon: <FiHome size={18} />, path: '/tt/rooms' },
+    { label: 'Faculty View', icon: <FiUsers size={18} />, path: '/tt/faculty-timetable' },
   ];
 
   const handleNavigation = (path, label) => {
@@ -216,11 +216,11 @@ export default function TTInchargeLayout() {
         {/* Main content area with padding top to account for fixed header */}
         <main className="flex-1 p-6 pt-24">
           <Routes>
-            <Route path="/tt-dashboard" element={<TTInchargeDashboard />} />
-            <Route path="/timetable-builder" element={<TimetableBuilder />} />
-            <Route path="/conflicts" element={<Conflicts />} />
-            <Route path="/rooms" element={<RoomAvailability />} />
-            <Route path="/faculty-timetable" element={<FacultyTimetable />} />
+            <Route path="dashboard" element={<TTInchargeDashboard />} />
+            <Route path="timetable-builder" element={<TimetableBuilder />} />
+            <Route path="conflicts" element={<Conflicts />} />
+            <Route path="rooms" element={<RoomAvailability />} />
+            <Route path="faculty-timetable" element={<FacultyTimetable />} />
           </Routes>
           <Outlet />
         </main>

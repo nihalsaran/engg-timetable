@@ -3,13 +3,13 @@ import { useState } from 'react';
 import { FiMenu, FiBell, FiSearch, FiUser, FiUsers, FiGrid, FiLayers, FiHome, FiFileText, FiSettings, FiBookOpen } from 'react-icons/fi';
 
 const navItems = [
-  { label: 'Dashboard', icon: <FiGrid />, path: '/admin-dashboard' },
-  { label: 'Users', icon: <FiUsers />, path: '/users' },
-  { label: 'Faculty', icon: <FiBookOpen />, path: '/faculty' },
-  { label: 'Departments', icon: <FiLayers />, path: '/departments' },
-  { label: 'Rooms', icon: <FiHome />, path: '/admin-rooms' },
-  { label: 'Reports', icon: <FiFileText />, path: '/superadmin-reports' },
-  { label: 'Settings', icon: <FiSettings />, path: '/settings' },
+  { label: 'Dashboard', icon: <FiGrid />, path: '/admin/dashboard' },
+  { label: 'Users', icon: <FiUsers />, path: '/admin/users' },
+  { label: 'Faculty', icon: <FiBookOpen />, path: '/admin/faculty' },
+  { label: 'Departments', icon: <FiLayers />, path: '/admin/departments' },
+  { label: 'Rooms', icon: <FiHome />, path: '/admin/rooms' },
+  { label: 'Reports', icon: <FiFileText />, path: '/admin/reports' },
+  { label: 'Settings', icon: <FiSettings />, path: '/admin/settings' },
 ];
 
 export default function SuperAdminLayout() {
