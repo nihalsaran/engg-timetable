@@ -12,7 +12,8 @@ import {
   FiLayers,
   FiGrid,
   FiTool,
-  FiFileText
+  FiFileText,
+  FiHome
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
@@ -45,6 +46,11 @@ export default function TTInchargeDashboard() {
   // Handle navigation to conflicts
   const navigateToConflicts = () => {
     navigate('/conflicts');
+  };
+
+  // Handle navigation to room availability
+  const navigateToRoomAvailability = () => {
+    navigate('/room-availability');
   };
   
   // Handle publish timetable
@@ -196,6 +202,28 @@ export default function TTInchargeDashboard() {
           <button className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium shadow hover:shadow-lg transition flex items-center justify-center gap-2 mt-2">
             <FiAlertTriangle size={18} />
             <span>View {conflicts} Conflicts</span>
+          </button>
+        </motion.div>
+
+        {/* Room Availability */}
+        <motion.div 
+          className="rounded-2xl p-6 bg-gradient-to-br from-teal-50 to-green-50 shadow-md hover:shadow-lg cursor-pointer"
+          onClick={navigateToRoomAvailability}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-teal-100 p-3 rounded-full">
+              <FiHome size={24} className="text-teal-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-teal-800">🏠 Room Availability</h2>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Check the availability of rooms for scheduling and ensure optimal utilization of resources.
+          </p>
+          <button className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-green-500 text-white font-medium shadow hover:shadow-lg transition flex items-center justify-center gap-2 mt-2">
+            <FiHome size={18} />
+            <span>Check Availability</span>
           </button>
         </motion.div>
 
