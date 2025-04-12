@@ -222,7 +222,6 @@ export default function TTInchargeLayout() {
             <Route path="rooms" element={<RoomAvailability />} />
             <Route path="faculty-timetable" element={<FacultyTimetable />} />
           </Routes>
-          <Outlet />
         </main>
       </div>
     </div>
