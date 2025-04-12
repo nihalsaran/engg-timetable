@@ -1,5 +1,20 @@
-import authService from '../../../appwrite/auth';
-// Removed facultyService import
+// Removed import authService from '../../../appwrite/auth';
+// Added mock auth service for temporary use
+const mockAuthService = {
+  createAccount: async (email, password, name) => {
+    console.log('Mock auth: Creating account for', name, email);
+    // Return a mock successful response
+    return {
+      success: true,
+      user: { 
+        $id: `user-${Math.floor(Math.random() * 10000)}`,
+        name,
+        email
+      },
+      error: null
+    };
+  }
+};
 
 // Subject areas that teachers can specialize in
 export const subjectAreas = [
@@ -67,7 +82,8 @@ export const createTeacher = async (teacherData) => {
   try {
     // Create user account first
     const { name, email, password } = teacherData;
-    const userResult = await authService.createAccount(email, password, name);
+    // Using mockAuthService instead of authService
+    const userResult = await mockAuthService.createAccount(email, password, name);
     
     if (!userResult.success) {
       throw new Error('Failed to create user account');

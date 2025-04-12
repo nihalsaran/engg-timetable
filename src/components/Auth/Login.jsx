@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampusIllustration from './CampusIllustration';
-import authService from '../../appwrite/auth';
+import { loginUser } from './services/Login';
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -28,41 +28,14 @@ const Login = () => {
       setLoginError('');
       
       try {
-        const response = await authService.login(values.email, values.password);
+        const userData = await loginUser(values);
+        console.log('Login successful:', userData);
         
-        if (response.success) {
-          // Check user role and navigate to appropriate dashboard
-          const currentUser = await authService.getCurrentUser();
-          if (currentUser.success) {
-            // Navigate based on user role - this would come from your user's appwrite document
-            // For now, let's assume all users are admins
-            navigate('/admin-dashboard');
-            
-            // In a real app, you would do something like:
-            /*
-            switch (currentUser.user.role) {
-              case 'admin':
-                navigate('/admin-dashboard');
-                break;
-              case 'hod':
-                navigate('/hod-dashboard');
-                break;
-              case 'ttincharge':
-                navigate('/tt-dashboard');
-                break;
-              default:
-                navigate('/login');
-            }
-            */
-          } else {
-            navigate('/admin-dashboard');
-          }
-        } else {
-          setLoginError('Failed to login. Please check your credentials.');
-        }
+        // Redirect based on user role (could be enhanced with proper routing)
+        navigate('/admin-dashboard');
       } catch (error) {
         console.error('Login failed:', error);
-        setLoginError('Authentication failed. Please check your credentials.');
+        setLoginError(error.message || 'Login failed. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -108,17 +81,17 @@ const Login = () => {
                 </h2>
               </motion.div>
 
-              {loginError && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 p-3 bg-red-500/30 border border-red-500/50 rounded-lg text-white text-sm"
-                >
-                  {loginError}
-                </motion.div>
-              )}
-
               <form className="space-y-6" onSubmit={formik.handleSubmit}>
+                {loginError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 rounded-md bg-red-500/20 border border-red-500/30 text-white text-sm"
+                  >
+                    {loginError}
+                  </motion.div>
+                )}
+                
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampusIllustration from './CampusIllustration';
-import authService from '../../appwrite/auth';
 
 const ForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [resetError, setResetError] = useState('');
 
   const formik = useFormik({
     initialValues: {
@@ -22,19 +20,12 @@ const ForgotPassword = () => {
     }),
     onSubmit: async (values) => {
       setIsLoading(true);
-      setResetError('');
-      
       try {
-        const result = await authService.resetPassword(values.email);
-        
-        if (result.success) {
-          setIsSubmitted(true);
-        } else {
-          setResetError('Failed to process your request. Please try again.');
-        }
+        console.log('Password reset requested for:', values.email);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setIsSubmitted(true);
       } catch (error) {
         console.error('Password reset request failed:', error);
-        setResetError('An error occurred while processing your request. Please try again later.');
       } finally {
         setIsLoading(false);
       }
@@ -113,16 +104,6 @@ const ForgotPassword = () => {
                       Enter your email address and we'll send you instructions
                     </p>
                   </motion.div>
-
-                  {resetError && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mb-4 p-3 bg-red-500/30 border border-red-500/50 rounded-lg text-white text-sm"
-                    >
-                      {resetError}
-                    </motion.div>
-                  )}
 
                   <form className="space-y-6" onSubmit={formik.handleSubmit}>
                     <motion.div
