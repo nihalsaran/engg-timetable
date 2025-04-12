@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampusIllustration from './CampusIllustration';
+import { submitPasswordResetForm } from './services/ForgotPassword';
 
 const ForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const formik = useFormik({
     initialValues: {
@@ -19,16 +21,8 @@ const ForgotPassword = () => {
         .required('Email is required'),
     }),
     onSubmit: async (values) => {
-      setIsLoading(true);
-      try {
-        console.log('Password reset requested for:', values.email);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setIsSubmitted(true);
-      } catch (error) {
-        console.error('Password reset request failed:', error);
-      } finally {
-        setIsLoading(false);
-      }
+      setErrorMessage('');
+      await submitPasswordResetForm(values.email, setIsLoading, setIsSubmitted, setErrorMessage);
     },
   });
 
@@ -165,6 +159,16 @@ const ForgotPassword = () => {
                           </motion.span>
                         </AnimatePresence>
                       </button>
+
+                      {errorMessage && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mt-2 text-sm text-red-400 text-center"
+                        >
+                          {errorMessage}
+                        </motion.p>
+                      )}
 
                       <div className="text-center">
                         <Link
