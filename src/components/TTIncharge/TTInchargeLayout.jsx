@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, Routes, Route } from 'react-router-dom';
 import { 
   FiGrid, 
   FiCalendar, 
@@ -12,8 +12,15 @@ import {
   FiChevronUp,
   FiChevronLeft,
   FiChevronRight,
-  FiMenu
+  FiMenu,
+  FiLayers
 } from 'react-icons/fi';
+
+import TTInchargeDashboard from './TTInchargeDashboard';
+import TimetableBuilder from './TimetableBuilder';
+import Conflicts from './Conflicts';
+import RoomAvailability from './RoomAvailability';
+import FacultyTimetable from './FacultyTimetable';
 
 export default function TTInchargeLayout() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
@@ -56,6 +63,8 @@ export default function TTInchargeLayout() {
       setActiveSidebarItem('Rooms');
     } else if (path.includes('faculty-view')) {
       setActiveSidebarItem('Faculty View');
+    } else if (path.includes('faculty-timetable')) {
+      setActiveSidebarItem('Faculty Timetable');
     }
   }, [location]);
   
@@ -68,7 +77,7 @@ export default function TTInchargeLayout() {
     { label: 'Timetable Builder', icon: <FiCalendar size={18} />, path: '/timetable-builder' },
     { label: 'Conflicts', icon: <FiAlertCircle size={18} />, path: '/conflicts' },
     { label: 'Rooms', icon: <FiHome size={18} />, path: '/rooms' },
-    { label: 'Faculty View', icon: <FiUsers size={18} />, path: '/faculty-view' },
+    { label: 'Faculty View', icon: <FiUsers size={18} />, path: '/faculty-timetable' },
   ];
 
   const handleNavigation = (path, label) => {
@@ -206,6 +215,13 @@ export default function TTInchargeLayout() {
 
         {/* Main content area with padding top to account for fixed header */}
         <main className="flex-1 p-6 pt-24">
+          <Routes>
+            <Route path="/tt-dashboard" element={<TTInchargeDashboard />} />
+            <Route path="/timetable-builder" element={<TimetableBuilder />} />
+            <Route path="/conflicts" element={<Conflicts />} />
+            <Route path="/rooms" element={<RoomAvailability />} />
+            <Route path="/faculty-timetable" element={<FacultyTimetable />} />
+          </Routes>
           <Outlet />
         </main>
       </div>

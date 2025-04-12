@@ -21,6 +21,7 @@ import TTInchargeDashboard from './components/TTIncharge/TTInchargeDashboard'
 import TimetableBuilder from './components/TTIncharge/TimetableBuilder'
 import Conflicts from './components/TTIncharge/Conflicts'
 import RoomAvailability from './components/TTIncharge/RoomAvailability'
+import FacultyTimetable from './components/TTIncharge/FacultyTimetable'
 
 function App() {
   return (
@@ -46,7 +47,7 @@ function App() {
           <Route path="/conflicts" element={<Conflicts />} />
           <Route path="/rooms" element={<RoomAvailability />} />
           <Route path="/room-availability" element={<RoomAvailability />} />
-          <Route path="/faculty-view" element={<div>Faculty View</div>} />
+          <Route path="/faculty-timetable" element={<FacultyTimetable />} />
         </Route>
 
         <Route path="/" element={<SuperAdminLayout />}>

@@ -27,7 +27,7 @@ export default function TTInchargeDashboard() {
   // Semester progress calculation
   const startDate = new Date('2025-01-15');
   const endDate = new Date('2025-05-15');
-  const currentDate = new Date('2025-04-10'); // Current date
+  const currentDate = new Date('2025-04-12'); // Updated to current date from context
   const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
   const daysElapsed = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
   const progressPercentage = Math.min(100, Math.round((daysElapsed / totalDays) * 100));
@@ -51,6 +51,11 @@ export default function TTInchargeDashboard() {
   // Handle navigation to room availability
   const navigateToRoomAvailability = () => {
     navigate('/room-availability');
+  };
+  
+  // Handle navigation to faculty timetable
+  const navigateToFacultyTimetable = () => {
+    navigate('/faculty-timetable');
   };
   
   // Handle publish timetable
@@ -224,6 +229,28 @@ export default function TTInchargeDashboard() {
           <button className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-green-500 text-white font-medium shadow hover:shadow-lg transition flex items-center justify-center gap-2 mt-2">
             <FiHome size={18} />
             <span>Check Availability</span>
+          </button>
+        </motion.div>
+
+        {/* Faculty Timetable Viewer */}
+        <motion.div 
+          className="rounded-2xl p-6 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md hover:shadow-lg cursor-pointer"
+          onClick={navigateToFacultyTimetable}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-purple-100 p-3 rounded-full">
+              <FiLayers size={24} className="text-purple-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-purple-800">👩‍🏫 Faculty Timetable Viewer</h2>
+          </div>
+          <p className="text-gray-600 mb-4">
+            View individual faculty timetables to ensure balanced workloads and avoid scheduling conflicts.
+          </p>
+          <button className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium shadow hover:shadow-lg transition flex items-center justify-center gap-2 mt-2">
+            <FiLayers size={18} />
+            <span>View Faculty Timetables</span>
           </button>
         </motion.div>
 
