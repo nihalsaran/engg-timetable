@@ -1,40 +1,96 @@
-// Added mock auth service for temporary use
-const mockAuthService = {
-  resetPassword: async (email) => {
-    console.log('Mock auth: Password reset requested for', email);
-    // Simulate network request
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // Return a mock successful response
-    return { success: true };
-  }
-};
+// Password reset service using Appwrite
+import { account } from '../../../appwrite/config';
+import { AppwriteException } from 'appwrite';
 
 /**
- * Handle password reset request
+ * Handle password reset request using Appwrite
  * @param {string} email - User email address for password reset
  * @returns {Promise<{success: boolean, error: string}>}
  */
 export const handlePasswordReset = async (email) => {
   try {
-    // Using mockAuthService instead of authService
-    const response = await mockAuthService.resetPassword(email);
+    // Create password recovery using Appwrite
+    // The URL should be your frontend URL where user will be redirected to reset password
+    await account.createRecovery(
+      email,
+      'https://your-app-url.com/reset-password' // Update this URL to your actual reset password page
+    );
     
-    if (response.success) {
-      return { 
-        success: true, 
-        error: '' 
-      };
-    } else {
-      return { 
-        success: false, 
-        error: 'Failed to process your request. Please try again.' 
-      };
-    }
+    return { 
+      success: true, 
+      error: '' 
+    };
   } catch (error) {
     console.error('Password reset request failed:', error);
+    
+    if (error instanceof AppwriteException) {
+      // Handle specific Appwrite errors
+      switch (error.code) {
+        case 404:
+          return { 
+            success: false, 
+            error: 'No account found with this email address.' 
+          };
+        default:
+          return { 
+            success: false, 
+            error: 'An error occurred: ' + error.message
+          };
+      }
+    }
+    
     return { 
       success: false, 
       error: 'An error occurred while processing your request. Please try again later.' 
+    };
+  }
+};
+
+/**
+ * Complete the password reset process using token and password
+ * @param {string} userId - User ID received from the URL
+ * @param {string} secret - Secret code received from the URL
+ * @param {string} password - New password
+ * @param {string} passwordAgain - Confirmation of the new password
+ * @returns {Promise<{success: boolean, error: string}>}
+ */
+export const completePasswordReset = async (userId, secret, password, passwordAgain) => {
+  try {
+    if (password !== passwordAgain) {
+      return {
+        success: false,
+        error: 'Passwords do not match.'
+      };
+    }
+
+    await account.updateRecovery(userId, secret, password, passwordAgain);
+    
+    return {
+      success: true,
+      error: ''
+    };
+  } catch (error) {
+    console.error('Password reset completion failed:', error);
+    
+    if (error instanceof AppwriteException) {
+      // Handle specific Appwrite errors
+      switch (error.code) {
+        case 401:
+          return {
+            success: false,
+            error: 'Invalid or expired reset link.'
+          };
+        default:
+          return {
+            success: false,
+            error: 'An error occurred: ' + error.message
+          };
+      }
+    }
+    
+    return {
+      success: false,
+      error: 'An error occurred while resetting your password. Please try again.'
     };
   }
 };
@@ -72,5 +128,6 @@ export const submitPasswordResetForm = async (email, setIsLoading, setIsSubmitte
 
 export default {
   handlePasswordReset,
+  completePasswordReset,
   submitPasswordResetForm
 };

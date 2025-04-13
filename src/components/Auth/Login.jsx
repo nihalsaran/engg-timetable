@@ -1,15 +1,50 @@
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useContext } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampusIllustration from './CampusIllustration';
-import { loginUser } from './services/Login';
+import { loginUser, checkSession } from './services/Login';
+import { AuthContext } from '../../App';
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const { setUser } = useContext(AuthContext);
+
+  // Check for messages from redirection (like password reset success)
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+    }
+  }, [location]);
+
+  // Check if the user is already logged in
+  useEffect(() => {
+    const verifySession = async () => {
+      try {
+        const isLoggedIn = await checkSession();
+        if (isLoggedIn) {
+          // Get destination from location state or use default based on role
+          const from = location.state?.from?.pathname;
+          if (from) {
+            navigate(from);
+          } else {
+            // Will be redirected based on role by the protected route component
+            navigate('/admin/dashboard');
+          }
+        }
+      } catch (error) {
+        console.error("Session verification failed:", error);
+        // Stay on login page
+      }
+    };
+    
+    verifySession();
+  }, [navigate, location]);
 
   const formik = useFormik({
     initialValues: {
@@ -26,13 +61,35 @@ const Login = () => {
     onSubmit: async (values) => {
       setIsLoading(true);
       setLoginError('');
+      setSuccessMessage('');
       
       try {
         const userData = await loginUser(values);
-        console.log('Login successful:', userData);
         
-        // Redirect based on user role (could be enhanced with proper routing)
-        navigate('/admin-dashboard');
+        // Update the authentication context
+        setUser(userData);
+        
+        // Get destination from location state or use default based on role
+        const from = location.state?.from?.pathname;
+        
+        // Redirect based on user role
+        if (from) {
+          navigate(from);
+        } else {
+          switch(userData.role) {
+            case 'admin':
+              navigate('/admin/dashboard');
+              break;
+            case 'hod':
+              navigate('/hod/dashboard');
+              break;
+            case 'tt_incharge':
+              navigate('/tt/dashboard');
+              break;
+            default:
+              navigate('/login');
+          }
+        }
       } catch (error) {
         console.error('Login failed:', error);
         setLoginError(error.message || 'Login failed. Please try again.');
@@ -82,6 +139,16 @@ const Login = () => {
               </motion.div>
 
               <form className="space-y-6" onSubmit={formik.handleSubmit}>
+                {successMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 rounded-md bg-green-500/20 border border-green-500/30 text-white text-sm"
+                  >
+                    {successMessage}
+                  </motion.div>
+                )}
+                
                 {loginError && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -158,14 +225,15 @@ const Login = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="flex items-center justify-between"
                 >
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
-                  >
-                    Forgot your password?
-                  </Link>
+                  <div className="text-right">
+                    <Link
+                      to="/forgot-password"
+                      className="text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
+                    >
+                      Forgot your password?
+                    </Link>
+                  </div>
                 </motion.div>
 
                 <motion.div
@@ -196,6 +264,22 @@ const Login = () => {
                     </AnimatePresence>
                   </button>
                 </motion.div>
+                
+                <div className="text-center pt-2">
+                  <p className="text-sm text-indigo-300/70">
+                    If you need an account, please contact your administrator.
+                  </p>
+                </div>
+                
+                {/* Link to SuperAdmin Registration for initial setup */}
+                <div className="text-center border-t border-white/10 pt-4 mt-4">
+                  <Link
+                    to="/super-admin-registration"
+                    className="text-sm text-indigo-300 hover:underline"
+                  >
+                    First time setup? Create SuperAdmin account
+                  </Link>
+                </div>
               </form>
             </div>
           </motion.div>

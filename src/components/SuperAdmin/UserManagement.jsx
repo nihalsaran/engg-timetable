@@ -1,36 +1,57 @@
 import { useState, useEffect } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiUser, FiUsers, FiShield } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiUser, FiUsers, FiShield, FiMail, FiAlertCircle } from 'react-icons/fi';
 import { 
   getUsers, 
   getDepartments, 
+  getRoles,
   createUser, 
   updateUser, 
   deleteUser,
+  toggleUserStatus,
+  sendPasswordReset,
   getInitials,
   getAvatarBg,
   getRoleBadgeColor
 } from './services/UserManagement';
+import { toast } from 'react-hot-toast';
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({ 
     name: '', 
     email: '', 
-    password: '',
-    role: 'Faculty',
+    role: 'faculty',
     department: '',
     active: true
   });
-  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
 
   // Load data on component mount
   useEffect(() => {
-    // Get users and departments from service
-    setUsers(getUsers());
-    setDepartments(getDepartments());
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        // Get users from Appwrite
+        const usersData = await getUsers();
+        setUsers(usersData);
+        
+        // Get departments and roles
+        setDepartments(getDepartments());
+        setRoles(getRoles());
+      } catch (error) {
+        console.error('Error loading users:', error);
+        toast.error('Failed to load users');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
 
   const openModal = (user = null) => {
@@ -38,29 +59,28 @@ export default function UserManagement() {
       setFormData({ 
         name: user.name, 
         email: user.email, 
-        password: '',
         role: user.role,
         department: user.department,
         active: user.active
       });
       setEditingId(user.id);
+      setEditingUserId(user.userId);
     } else {
       setFormData({ 
         name: '', 
         email: '', 
-        password: '',
-        role: 'Faculty',
+        role: 'faculty',
         department: '',
         active: true
       });
       setEditingId(null);
+      setEditingUserId(null);
     }
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
-    setShowPassword(false);
   };
 
   const handleChange = (e) => {
@@ -68,38 +88,94 @@ export default function UserManagement() {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    if (editingId) {
-      // Update existing user
-      const updatedUser = updateUser(editingId, formData);
-      setUsers(users.map(user => user.id === editingId ? updatedUser : user));
-    } else {
-      // Create new user
-      const newUser = createUser(formData);
-      setUsers([...users, newUser]);
+    try {
+      if (editingId) {
+        // Update existing user
+        const updatedUser = await updateUser(editingId, formData);
+        setUsers(users.map(user => user.id === editingId ? updatedUser : user));
+        toast.success('User updated successfully');
+      } else {
+        // Create new user
+        const newUser = await createUser(formData);
+        setUsers([...users, newUser]);
+        toast.success('User created successfully');
+      }
+      
+      closeModal();
+    } catch (error) {
+      console.error('Error saving user:', error);
+      toast.error(error.message || 'Failed to save user');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id, userId) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) {
+      return;
     }
     
-    closeModal();
+    setIsLoading(true);
+    try {
+      await deleteUser(id, userId);
+      setUsers(users.filter(user => user.id !== id));
+      toast.success('User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error(error.message || 'Failed to delete user');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const handleToggleStatus = async (id, active) => {
+    setIsLoading(true);
+    try {
+      await toggleUserStatus(id, !active);
+      setUsers(users.map(user => user.id === id ? {...user, active: !active} : user));
+      toast.success(`User ${!active ? 'activated' : 'deactivated'} successfully`);
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      toast.error(error.message || 'Failed to update user status');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDelete = (id) => {
-    deleteUser(id);
-    setUsers(users.filter(user => user.id !== id));
+  const handlePasswordReset = async (email) => {
+    if (!window.confirm('Send password reset email to this user?')) {
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      await sendPasswordReset(email);
+      toast.success('Password reset email sent successfully');
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      toast.error(error.message || 'Failed to send password reset');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getRoleIcon = (role) => {
     switch (role) {
-      case 'HOD': return <FiShield className="mr-1" />;
-      case 'TT Incharge': return <FiUsers className="mr-1" />;
-      case 'Faculty': return <FiUser className="mr-1" />;
+      case 'admin': return <FiShield className="mr-1" />;
+      case 'hod': return <FiShield className="mr-1" />;
+      case 'tt_incharge': return <FiUsers className="mr-1" />;
+      case 'faculty': return <FiUser className="mr-1" />;
       default: return null;
     }
+  };
+
+  const getRoleDisplayName = (role) => {
+    const roleObj = roles.find(r => r.value === role);
+    return roleObj ? roleObj.label : role;
   };
 
   return (
@@ -120,45 +196,71 @@ export default function UserManagement() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {users.map((user, idx) => (
-              <tr key={user.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-medium ${getAvatarBg(user.name)}`}>
-                      {getInitials(user.name)}
-                    </div>
-                    <span className="ml-3">{user.name}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
-                    {getRoleIcon(user.role)}
-                    {user.role}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">{user.department}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {user.active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <button 
-                    onClick={() => openModal(user)}
-                    className="text-indigo-600 hover:text-indigo-900 mx-1"
-                  >
-                    <FiEdit2 size={18} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(user.id)}
-                    className="text-red-600 hover:text-red-900 mx-1"
-                  >
-                    <FiTrash2 size={18} />
-                  </button>
+            {isLoading && !users.length ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                  Loading users...
                 </td>
               </tr>
-            ))}
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                  No users found. Add your first user with the button below.
+                </td>
+              </tr>
+            ) : (
+              users.map((user, idx) => (
+                <tr key={user.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white font-medium ${getAvatarBg(user.name)}`}>
+                        {getInitials(user.name)}
+                      </div>
+                      <span className="ml-3">{user.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
+                      {getRoleIcon(user.role)}
+                      {getRoleDisplayName(user.role)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{user.department}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => handleToggleStatus(user.id, user.active)}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                    >
+                      {user.active ? 'Active' : 'Inactive'}
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
+                    <button 
+                      onClick={() => handlePasswordReset(user.email)}
+                      className="text-blue-600 hover:text-blue-900"
+                      title="Send password reset"
+                    >
+                      <FiMail size={18} />
+                    </button>
+                    <button 
+                      onClick={() => openModal(user)}
+                      className="text-indigo-600 hover:text-indigo-900"
+                      title="Edit user"
+                    >
+                      <FiEdit2 size={18} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(user.id, user.userId)}
+                      className="text-red-600 hover:text-red-900"
+                      title="Delete user"
+                    >
+                      <FiTrash2 size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -167,6 +269,7 @@ export default function UserManagement() {
       <button
         onClick={() => openModal()}
         className="fixed bottom-8 right-8 p-4 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg hover:scale-105 transition flex items-center"
+        disabled={isLoading}
       >
         <FiPlus size={24} className="mr-1" />
         <span>Add New User</span>
@@ -188,6 +291,7 @@ export default function UserManagement() {
                   value={formData.name}
                   onChange={handleChange}
                   required
+                  disabled={isLoading}
                   className="w-full px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-400 focus:outline-none peer pt-6"
                   placeholder=" "
                 />
@@ -208,6 +312,7 @@ export default function UserManagement() {
                   value={formData.email}
                   onChange={handleChange}
                   required
+                  disabled={isLoading}
                   className="w-full px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-400 focus:outline-none peer pt-6"
                   placeholder=" "
                 />
@@ -219,32 +324,15 @@ export default function UserManagement() {
                 </label>
               </div>
 
-              {/* Password Input with Toggle */}
-              <div className="relative">
-                <input
-                  name="password"
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={handleChange}
-                  required={!editingId}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-400 focus:outline-none peer pt-6 pr-12"
-                  placeholder=" "
-                />
-                <label 
-                  htmlFor="password"
-                  className="absolute left-4 top-3 text-gray-500 text-sm transition-all peer-focus:top-1 peer-focus:text-xs peer-focus:text-indigo-500 peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-not-placeholder-shown:top-1 peer-not-placeholder-shown:text-xs"
-                >
-                  Password {editingId && '(leave blank to keep current)'}
-                </label>
-                <button 
-                  type="button"
-                  onClick={togglePasswordVisibility}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500"
-                >
-                  {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-                </button>
-              </div>
+              {/* Password Note for Edit Mode */}
+              {editingId && (
+                <div className="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                  <FiAlertCircle className="text-yellow-500 mr-2 flex-shrink-0" />
+                  <span className="text-gray-700">
+                    Password changes are handled via the reset password option.
+                  </span>
+                </div>
+              )}
 
               {/* Role Dropdown */}
               <div className="relative">
@@ -253,11 +341,12 @@ export default function UserManagement() {
                   id="role"
                   value={formData.role}
                   onChange={handleChange}
+                  disabled={isLoading}
                   className="w-full px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-400 focus:outline-none appearance-none pt-6"
                 >
-                  <option value="HOD">HOD</option>
-                  <option value="TT Incharge">TT Incharge</option>
-                  <option value="Faculty">Faculty</option>
+                  {roles.map((role) => (
+                    <option key={role.value} value={role.value}>{role.label}</option>
+                  ))}
                 </select>
                 <label 
                   htmlFor="role"
@@ -278,6 +367,7 @@ export default function UserManagement() {
                   value={formData.department}
                   onChange={handleChange}
                   required
+                  disabled={isLoading}
                   className="w-full px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-400 focus:outline-none appearance-none pt-6"
                 >
                   <option value="" disabled>Select Department</option>
@@ -302,6 +392,7 @@ export default function UserManagement() {
                     name="active"
                     checked={formData.active}
                     onChange={handleChange}
+                    disabled={isLoading}
                     className="sr-only peer" 
                   />
                   <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
@@ -316,14 +407,16 @@ export default function UserManagement() {
                   type="button"
                   onClick={closeModal}
                   className="px-4 py-2 rounded-full border border-gray-300 hover:bg-gray-100 transition flex items-center"
+                  disabled={isLoading}
                 >
-                  ❌ Cancel
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition flex items-center"
+                  disabled={isLoading}
                 >
-                  💾 Save User
+                  {isLoading ? 'Saving...' : 'Save User'}
                 </button>
               </div>
             </form>
