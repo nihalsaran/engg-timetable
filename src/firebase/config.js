@@ -23,16 +23,15 @@ import {
     Timestamp
 } from 'firebase/firestore';
 
-// Firebase configuration
-// Replace with your actual Firebase project config
+// Firebase configuration using environment variables
 const firebaseConfig = {
-    apiKey: "AIzaSyA0WHGL1wW8LeTovKp2-3ePuaewhrxuegs",
-    authDomain: "engg-timetable.firebaseapp.com",
-    projectId: "engg-timetable",
-    storageBucket: "engg-timetable.firebasestorage.app",
-    messagingSenderId: "1031775120184",
-    appId: "1:1031775120184:web:bc79423c93a9c7799fafcd",
-    measurementId: "G-8XZ2NLCZ9R"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase

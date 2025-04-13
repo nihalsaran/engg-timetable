@@ -3,10 +3,9 @@ import { Client, Account, Databases, ID, Query } from 'appwrite';
 // Initialize the Appwrite client
 const client = new Client();
 
-// Appwrite configuration 
-// Replace YOUR_APPWRITE_PROJECT_ID with your actual project ID
-const APPWRITE_ENDPOINT = 'https://cloud.appwrite.io/v1';
-const APPWRITE_PROJECT_ID = '67f7e292003cf5bb6c83';
+// Appwrite configuration using environment variables
+const APPWRITE_ENDPOINT = import.meta.env.VITE_APPWRITE_ENDPOINT;
+const APPWRITE_PROJECT_ID = import.meta.env.VITE_APPWRITE_PROJECT_ID;
 
 // Configure the client
 client

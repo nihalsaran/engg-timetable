@@ -87,9 +87,8 @@ export const registerSuperAdmin = async (userData) => {
 
 // Validate registration secret key
 export const validateSecretKey = async (secretKey) => {
-  // In a real application, this would validate against a secure backend or Firebase
-  // For now, let's use a hardcoded key (not secure for production!)
-  const VALID_SECRET_KEY = 'super_admin_setup_2023';
-  
+  // Use the environment variable for the secret key
+  const VALID_SECRET_KEY = import.meta.env.VITE_SUPER_ADMIN_SECRET_KEY;
+  w
   return secretKey === VALID_SECRET_KEY;
 };
