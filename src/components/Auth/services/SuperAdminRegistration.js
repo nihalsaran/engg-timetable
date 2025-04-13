@@ -1,107 +1,95 @@
-// SuperAdmin Registration Service - Uses Appwrite backend
-import { account, databases, ID } from '../../../appwrite/config';
-import { AppwriteException } from 'appwrite';
+// SuperAdmin Registration Service - Uses Firebase backend
+import { 
+  auth, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
+} from '../../../firebase/config.js';
+import { db, doc, setDoc, generateId } from '../../../firebase/config.js';
 
-// Database and collection IDs for SuperAdmin users
-const DATABASE_ID = '67f7e3ad000625b7800d';
-const SUPERADMIN_COLLECTION_ID = '67fb53550031901f06b4';
+// Database collection for SuperAdmin users
+const SUPERADMIN_COLLECTION = 'profiles';
 
 // Registration code specifically for creating SuperAdmin accounts
 export const registerSuperAdmin = async (userData) => {
   try {
-    // Step 1: Create a new account in Appwrite Auth
-    const newAccount = await account.create(
-      ID.unique(),
+    // Step 1: Create a new account in Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
       userData.email,
-      userData.password,
-      userData.name
+      userData.password
     );
     
-    console.log('Account created successfully:', newAccount.$id);
+    const user = userCredential.user;
+    console.log('Account created successfully:', user.uid);
     
-    // Step 2: Try to create a document with minimal required data
+    // Step 2: Create a document in Firestore with user profile data
     let documentId = null;
     
     try {
-      // Create document with minimal data (Appwrite requires at least one attribute)
-      const userDocument = await databases.createDocument(
-        DATABASE_ID,
-        SUPERADMIN_COLLECTION_ID,
-        ID.unique(), // Generate unique ID for document
-        {
-          // Provide at least one attribute to satisfy Appwrite requirements
-          role: 'superadmin'
-        }
-      );
+      // Create document in Firestore
+      documentId = user.uid; // Use Firebase Auth UID as document ID
       
-      documentId = userDocument.$id;
+      await setDoc(doc(db, SUPERADMIN_COLLECTION, documentId), {
+        userId: user.uid,
+        name: userData.name,
+        email: userData.email,
+        role: 'superadmin',
+        department: userData.department,
+        createdAt: new Date().toISOString()
+      });
+      
       console.log('SuperAdmin document created:', documentId);
     } catch (docError) {
-      console.warn('Could not create document in collection, continuing with auth only:', docError);
+      console.warn('Could not create document in Firestore, continuing with auth only:', docError);
       // Continue with just the auth account, without the database document
     }
     
-    // Step 3: Create a session for the new user using the correct method for current SDK version
+    // Step 3: Create a session for the new user
+    let sessionCreated = false;
     try {
-      // Try the modern SDK method first
-      await account.createSession(
-        userData.email,
-        userData.password
-      );
+      // User is already logged in after createUserWithEmailAndPassword
+      // but we can ensure a fresh session by logging in again
+      await signInWithEmailAndPassword(auth, userData.email, userData.password);
+      sessionCreated = true;
       console.log('Session created successfully');
     } catch (sessionError) {
-      console.warn('Could not create session using modern SDK method:', sessionError);
-      try {
-        // Fall back to older SDK method if available
-        if (typeof account.createEmailSession === 'function') {
-          await account.createEmailSession(
-            userData.email,
-            userData.password
-          );
-          console.log('Session created using legacy method');
-        } else {
-          console.warn('No suitable session creation method available');
-        }
-      } catch (fallbackError) {
-        console.warn('Could not create session using fallback method:', fallbackError);
-        // Continue without creating a session, user will need to log in manually
-      }
+      console.error('Could not create session:', sessionError);
+      // Continue without creating a session, user will need to log in manually
     }
     
     return {
-      id: newAccount.$id,
+      id: user.uid,
       documentId: documentId,
       name: userData.name,
       email: userData.email,
       role: 'superadmin',
-      created: true
+      created: true,
+      sessionCreated: sessionCreated // Include information about whether session was created
     };
   } catch (error) {
     console.error('SuperAdmin registration failed:', error);
     
-    // Handle specific Appwrite errors
-    if (error instanceof AppwriteException) {
-      switch (error.code) {
-        case 401:
-          throw new Error('Authorization failed: Check your Appwrite collection permissions');
-        case 409:
-          throw new Error('An account with this email already exists');
-        case 400:
-          throw new Error(`Validation failed: ${error.message}`);
-        default:
-          throw new Error(`Registration failed: ${error.message}`);
-      }
+    // Handle specific Firebase errors
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        throw new Error('An account with this email already exists');
+      case 'auth/invalid-email':
+        throw new Error('Invalid email address');
+      case 'auth/weak-password':
+        throw new Error('Password is too weak');
+      case 'auth/operation-not-allowed':
+        throw new Error('Account creation is disabled');
+      default:
+        throw new Error(`Registration failed: ${error.message}`);
     }
-    
-    throw new Error('Registration failed. Please try again later.');
   }
 };
 
 // Validate registration secret key
-export const validateSecretKey = (secretKey) => {
-  // In a real application, this would be more secure
-  // For example, validating against an environment variable or server-side check
-  const validSecretKey = "super-admin-secret-key-2025"; // Replace with actual secure key
+export const validateSecretKey = async (secretKey) => {
+  // In a real application, this would validate against a secure backend or Firebase
+  // For now, let's use a hardcoded key (not secure for production!)
+  const VALID_SECRET_KEY = 'super_admin_setup_2023';
   
-  return secretKey === validSecretKey;
+  return secretKey === VALID_SECRET_KEY;
 };

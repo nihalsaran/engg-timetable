@@ -11,9 +11,10 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [isCheckingSession, setIsCheckingSession] = useState(true); // Add this state to track session check
   const navigate = useNavigate();
   const location = useLocation();
-  const { setUser } = useContext(AuthContext);
+  const { setUser, user } = useContext(AuthContext);
 
   // Check for messages from redirection (like password reset success)
   useEffect(() => {
@@ -24,8 +25,35 @@ const Login = () => {
 
   // Check if the user is already logged in
   useEffect(() => {
+    // If user context already exists, don't check session again
+    if (user) {
+      const from = location.state?.from?.pathname;
+      if (from) {
+        navigate(from);
+      } else {
+        // Redirect based on user role
+        switch(user.role) {
+          case 'admin':
+            navigate('/admin/dashboard');
+            break;
+          case 'hod':
+            navigate('/hod/dashboard');
+            break;
+          case 'tt_incharge':
+            navigate('/tt/dashboard');
+            break;
+          default:
+            // Stay on login page
+        }
+      }
+      return;
+    }
+    
     const verifySession = async () => {
+      if (isLoading) return; // Don't check session if we're already logging in
+      
       try {
+        setIsCheckingSession(true);
         const isLoggedIn = await checkSession();
         if (isLoggedIn) {
           // Get destination from location state or use default based on role
@@ -40,11 +68,13 @@ const Login = () => {
       } catch (error) {
         console.error("Session verification failed:", error);
         // Stay on login page
+      } finally {
+        setIsCheckingSession(false);
       }
     };
     
     verifySession();
-  }, [navigate, location]);
+  }, [navigate, location, user, isLoading]);
 
   const formik = useFormik({
     initialValues: {
@@ -77,7 +107,7 @@ const Login = () => {
           navigate(from);
         } else {
           switch(userData.role) {
-            case 'admin':
+            case 'superadmin':
               navigate('/admin/dashboard');
               break;
             case 'hod':

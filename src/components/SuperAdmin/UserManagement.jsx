@@ -165,7 +165,7 @@ export default function UserManagement() {
 
   const getRoleIcon = (role) => {
     switch (role) {
-      case 'admin': return <FiShield className="mr-1" />;
+      case 'superadmin': return <FiShield className="mr-1" />;
       case 'hod': return <FiShield className="mr-1" />;
       case 'tt_incharge': return <FiUsers className="mr-1" />;
       case 'faculty': return <FiUser className="mr-1" />;

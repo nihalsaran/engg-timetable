@@ -1,20 +1,17 @@
-// Password reset service using Appwrite
-import { account } from '../../../appwrite/config';
-import { AppwriteException } from 'appwrite';
+// Password reset service using Firebase
+import { auth, sendPasswordResetEmail, confirmPasswordReset } from '../../../firebase/config.js';
 
 /**
- * Handle password reset request using Appwrite
+ * Handle password reset request using Firebase
  * @param {string} email - User email address for password reset
  * @returns {Promise<{success: boolean, error: string}>}
  */
 export const handlePasswordReset = async (email) => {
   try {
-    // Create password recovery using Appwrite
-    // The URL should be your frontend URL where user will be redirected to reset password
-    await account.createRecovery(
-      email,
-      'https://your-app-url.com/reset-password' // Update this URL to your actual reset password page
-    );
+    // Send password reset email using Firebase
+    await sendPasswordResetEmail(auth, email, {
+      url: window.location.origin + '/login' // Redirect URL after password reset
+    });
     
     return { 
       success: true, 
@@ -23,47 +20,42 @@ export const handlePasswordReset = async (email) => {
   } catch (error) {
     console.error('Password reset request failed:', error);
     
-    if (error instanceof AppwriteException) {
-      // Handle specific Appwrite errors
-      switch (error.code) {
-        case 404:
-          return { 
-            success: false, 
-            error: 'No account found with this email address.' 
-          };
-        default:
-          return { 
-            success: false, 
-            error: 'An error occurred: ' + error.message
-          };
-      }
+    // Handle Firebase errors
+    switch (error.code) {
+      case 'auth/user-not-found':
+        return { 
+          success: false, 
+          error: 'No account found with this email address.' 
+        };
+      case 'auth/invalid-email':
+        return { 
+          success: false, 
+          error: 'Invalid email address.' 
+        };
+      case 'auth/too-many-requests':
+        return { 
+          success: false, 
+          error: 'Too many requests. Please try again later.' 
+        };
+      default:
+        return { 
+          success: false, 
+          error: 'An error occurred while processing your request.' 
+        };
     }
-    
-    return { 
-      success: false, 
-      error: 'An error occurred while processing your request. Please try again later.' 
-    };
   }
 };
 
 /**
- * Complete the password reset process using token and password
- * @param {string} userId - User ID received from the URL
- * @param {string} secret - Secret code received from the URL
- * @param {string} password - New password
- * @param {string} passwordAgain - Confirmation of the new password
+ * Complete password reset with new password
+ * @param {string} oobCode - The action code from the reset email
+ * @param {string} password - The new password
  * @returns {Promise<{success: boolean, error: string}>}
  */
-export const completePasswordReset = async (userId, secret, password, passwordAgain) => {
+export const completePasswordReset = async (oobCode, password) => {
   try {
-    if (password !== passwordAgain) {
-      return {
-        success: false,
-        error: 'Passwords do not match.'
-      };
-    }
-
-    await account.updateRecovery(userId, secret, password, passwordAgain);
+    // Confirm password reset using Firebase
+    await confirmPasswordReset(auth, oobCode, password);
     
     return {
       success: true,
@@ -72,26 +64,29 @@ export const completePasswordReset = async (userId, secret, password, passwordAg
   } catch (error) {
     console.error('Password reset completion failed:', error);
     
-    if (error instanceof AppwriteException) {
-      // Handle specific Appwrite errors
-      switch (error.code) {
-        case 401:
-          return {
-            success: false,
-            error: 'Invalid or expired reset link.'
-          };
-        default:
-          return {
-            success: false,
-            error: 'An error occurred: ' + error.message
-          };
-      }
+    // Handle Firebase errors
+    switch (error.code) {
+      case 'auth/expired-action-code':
+        return {
+          success: false,
+          error: 'The password reset link has expired.'
+        };
+      case 'auth/invalid-action-code':
+        return {
+          success: false,
+          error: 'Invalid or already used password reset link.'
+        };
+      case 'auth/weak-password':
+        return {
+          success: false,
+          error: 'Password is too weak. Please choose a stronger password.'
+        };
+      default:
+        return {
+          success: false,
+          error: 'An error occurred while resetting your password. Please try again.'
+        };
     }
-    
-    return {
-      success: false,
-      error: 'An error occurred while resetting your password. Please try again.'
-    };
   }
 };
 
@@ -101,26 +96,23 @@ export const completePasswordReset = async (userId, secret, password, passwordAg
  * @param {string} email - User email address for password reset
  * @param {Function} setIsLoading - State setter for loading indicator
  * @param {Function} setIsSubmitted - State setter for form submission status
- * @param {Function} setError - State setter for error message (optional)
- * @returns {Promise<void>}
+ * @param {Function} setError - State setter for error messages
  */
-export const submitPasswordResetForm = async (email, setIsLoading, setIsSubmitted, setError = null) => {
+export const submitPasswordResetForm = async (email, setIsLoading, setIsSubmitted, setError) => {
   setIsLoading(true);
+  setError('');
+  
   try {
     const result = await handlePasswordReset(email);
     
     if (result.success) {
       setIsSubmitted(true);
-    } else if (setError) {
-      setError(result.error);
     } else {
-      console.error('Password reset error:', result.error);
+      setError(result.error || 'Failed to send password reset email. Please try again.');
     }
   } catch (error) {
-    console.error('Password reset request failed:', error);
-    if (setError) {
-      setError('An unexpected error occurred. Please try again.');
-    }
+    setError('An unexpected error occurred. Please try again later.');
+    console.error('Password reset submission error:', error);
   } finally {
     setIsLoading(false);
   }

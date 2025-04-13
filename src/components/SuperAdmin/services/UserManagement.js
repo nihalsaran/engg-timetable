@@ -1,6 +1,22 @@
-// User Management Service with Appwrite Integration
-import { account, databases, ID, Query } from '../../../appwrite/config';
-import { AppwriteException } from 'appwrite';
+// User Management Service with Firebase Integration
+import { 
+  auth, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail
+} from '../../../firebase/config.js';
+import { 
+  db, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where,
+  generateId
+} from '../../../firebase/config.js';
 
 // Department data - would come from Database in production
 const departments = [
@@ -12,36 +28,36 @@ const departments = [
 ];
 
 // User roles
-const roles = ['admin', 'hod', 'tt_incharge', 'faculty'];
+const roles = ['superadmin', 'hod', 'tt_incharge', 'faculty'];
 const roleDisplayNames = {
-  'admin': 'Admin',
+  'superadmin': 'Admin',
   'hod': 'HOD',
   'tt_incharge': 'TT Incharge',
   'faculty': 'Faculty'
 };
 
 /**
- * Fetch all users from the Appwrite database
+ * Fetch all users from the Firestore database
  * @returns {Promise<Array>} Array of user objects
  */
 export const getUsers = async () => {
   try {
-    // Replace with your actual database and collection IDs
-    const response = await databases.listDocuments(
-      'your_database_id',  // replace with your database ID
-      'profiles'           // replace with your collection ID
-    );
+    const profilesRef = collection(db, 'profiles');
+    const querySnapshot = await getDocs(profilesRef);
     
-    return response.documents.map(doc => ({
-      id: doc.$id,
-      userId: doc.userId,
-      name: doc.name,
-      email: doc.email,
-      role: doc.role,
-      department: doc.department,
-      active: doc.active !== false, // default to true if not specified
-      createdAt: doc.createdAt
-    }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        userId: data.userId || doc.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        department: data.department,
+        active: data.active !== false, // default to true if not specified
+        createdAt: data.createdAt
+      };
+    });
   } catch (error) {
     console.error('Error fetching users:', error);
     throw error;
@@ -59,54 +75,60 @@ export const getRoles = () => {
   }));
 };
 
+// Helper function to generate a secure password
+const generateSecurePassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
 /**
- * Create a new user in Appwrite and add their profile
+ * Create a new user in Firebase and add their profile
  * @param {Object} userData User data to create
  * @returns {Promise<Object>} Created user data
  */
 export const createUser = async (userData) => {
   try {
-    // Create the user account in Appwrite
     // Generate a random initial password
     const initialPassword = generateSecurePassword();
     
-    // Create user in Appwrite Authentication
-    const newUser = await account.create(
-      ID.unique(),
+    // Create user in Firebase Authentication (requires admin SDK in a real app)
+    // This example shows client-side approach, but in production you'd use Cloud Functions
+    // for security reasons
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
       userData.email,
-      initialPassword,
-      userData.name
+      initialPassword
     );
     
-    // Create user profile in database
-    const userProfile = await databases.createDocument(
-      'your_database_id',  // replace with your database ID
-      'profiles',          // replace with your collection ID
-      ID.unique(),
-      {
-        userId: newUser.$id,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        department: userData.department,
-        active: true,
-        createdAt: new Date().toISOString()
-      }
-    );
+    const user = userCredential.user;
     
-    // Optionally send a password reset email so the user can set their own password
+    // Create user profile in Firestore
+    const userProfileRef = doc(db, 'profiles', user.uid);
+    await setDoc(userProfileRef, {
+      userId: user.uid,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      department: userData.department,
+      active: true,
+      createdAt: new Date().toISOString()
+    });
+    
+    // Send password reset email so user can set their own password
     try {
-      await account.createRecovery(
-        userData.email,
-        'https://your-app-url.com/reset-password' // Update to your actual reset URL
-      );
+      await sendPasswordResetEmail(auth, userData.email, {
+        url: window.location.origin + '/login'
+      });
     } catch (recoveryError) {
       console.warn('Could not send password reset email:', recoveryError);
     }
     
     return {
-      id: userProfile.$id,
-      userId: newUser.$id,
+      id: user.uid,
       name: userData.name,
       email: userData.email,
       role: userData.role,
@@ -115,10 +137,8 @@ export const createUser = async (userData) => {
     };
   } catch (error) {
     console.error('Error creating user:', error);
-    if (error instanceof AppwriteException) {
-      if (error.code === 409) {
-        throw new Error('A user with this email already exists.');
-      }
+    if (error.code === 'auth/email-already-in-use') {
+      throw new Error('A user with this email already exists.');
     }
     throw new Error('Failed to create user: ' + error.message);
   }
@@ -132,28 +152,20 @@ export const createUser = async (userData) => {
  */
 export const updateUser = async (id, userData) => {
   try {
-    // Update user profile in database
-    const updatedProfile = await databases.updateDocument(
-      'your_database_id',  // replace with your database ID
-      'profiles',          // replace with your collection ID
-      id,
-      {
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        department: userData.department,
-        active: userData.active
-      }
-    );
+    // Update user profile in Firestore
+    const userProfileRef = doc(db, 'profiles', id);
+    await updateDoc(userProfileRef, {
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      department: userData.department,
+      active: userData.active !== false
+    });
     
     return {
-      id: updatedProfile.$id,
-      userId: updatedProfile.userId,
-      name: updatedProfile.name,
-      email: updatedProfile.email,
-      role: updatedProfile.role,
-      department: updatedProfile.department,
-      active: updatedProfile.active
+      id,
+      ...userData,
+      active: userData.active !== false
     };
   } catch (error) {
     console.error('Error updating user:', error);
@@ -162,52 +174,21 @@ export const updateUser = async (id, userData) => {
 };
 
 /**
- * Toggle user active status
- * @param {string} id User profile document ID
- * @param {boolean} active New active status
- * @returns {Promise<Object>}
- */
-export const toggleUserStatus = async (id, active) => {
-  try {
-    const updatedProfile = await databases.updateDocument(
-      'your_database_id',  // replace with your database ID
-      'profiles',          // replace with your collection ID
-      id,
-      { active }
-    );
-    
-    return {
-      id: updatedProfile.$id,
-      active: updatedProfile.active
-    };
-  } catch (error) {
-    console.error('Error toggling user status:', error);
-    throw new Error('Failed to update user status: ' + error.message);
-  }
-};
-
-/**
- * Delete a user (both auth account and profile)
- * @param {string} id User profile document ID
- * @param {string} userId User account ID
+ * Delete a user from the database
+ * @param {string} id The profile document ID
  * @returns {Promise<{success: boolean, id: string}>}
  */
-export const deleteUser = async (id, userId) => {
+export const deleteUser = async (id) => {
   try {
-    // Note: Deleting users requires administrative privileges
-    // In a client application, this should be done through a secure server function
+    // Delete user profile from Firestore
+    const userProfileRef = doc(db, 'profiles', id);
+    await deleteDoc(userProfileRef);
     
-    // 1. Delete user profile first
-    await databases.deleteDocument(
-      'your_database_id',  // replace with your database ID
-      'profiles',          // replace with your collection ID
-      id
-    );
-    
-    // 2. Attempt to delete user account (this will likely fail in a client app without admin privileges)
+    // In a real application, you would use Firebase Admin SDK
+    // to delete the user from Firebase Authentication
+    // This requires server-side code (Cloud Functions)
     try {
-      // This would typically be handled by a server-side function
-      // await account.deleteUser(userId);
+      // This is a placeholder - in production, you would call a Cloud Function
       console.log('User account deletion should be handled by server');
     } catch (authError) {
       console.warn('Could not delete auth account (requires admin privileges):', authError);
@@ -228,16 +209,15 @@ export const deleteUser = async (id, userId) => {
 export const sendPasswordReset = async (email) => {
   try {
     // Send password reset email
-    await account.createRecovery(
-      email,
-      'https://your-app-url.com/reset-password' // Update to your actual reset URL
-    );
+    await sendPasswordResetEmail(auth, email, {
+      url: window.location.origin + '/login'
+    });
     
     return { success: true };
   } catch (error) {
     console.error('Error sending password reset:', error);
     
-    if (error instanceof AppwriteException && error.code === 404) {
+    if (error.code === 'auth/user-not-found') {
       throw new Error('No user found with this email address.');
     }
     
@@ -245,70 +225,85 @@ export const sendPasswordReset = async (email) => {
   }
 };
 
-// Utility functions
-export const getInitials = (name) => {
-  return name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 2);
-};
-
-export const getAvatarBg = (name) => {
-  const colors = [
-    'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 
-    'bg-red-500', 'bg-orange-500', 'bg-amber-500',
-    'bg-yellow-500', 'bg-lime-500', 'bg-green-500',
-    'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500',
-    'bg-sky-500', 'bg-blue-500', 'bg-violet-500'
-  ];
-  
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return colors[hash % colors.length];
-};
-
-export const getRoleBadgeColor = (role) => {
-  switch (role) {
-    case 'hod': return 'bg-indigo-100 text-indigo-800';
-    case 'tt_incharge': return 'bg-purple-100 text-purple-800';
-    case 'faculty': return 'bg-green-100 text-green-700';
-    case 'admin': return 'bg-blue-100 text-blue-800';
-    default: return 'bg-gray-100 text-gray-800';
+/**
+ * Toggle a user's active status
+ * @param {string} id The profile document ID
+ * @param {boolean} isActive New active status
+ * @returns {Promise<{success: boolean}>}
+ */
+export const toggleUserStatus = async (id, isActive) => {
+  try {
+    const userProfileRef = doc(db, 'profiles', id);
+    await updateDoc(userProfileRef, {
+      active: isActive
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error toggling user status:', error);
+    throw new Error('Failed to update user status: ' + error.message);
   }
-};
-
-export const getRoleIcon = (role) => {
-  // Note: This function returns a reference to the icon component type,
-  // The actual icons need to be imported in the component file
-  return role;
 };
 
 /**
- * Generate a secure random password
- * @param {number} length Password length
- * @returns {string} A secure random password
+ * Get user initials from full name
+ * @param {string} name Full name
+ * @returns {string} Initials (up to two characters)
  */
-const generateSecurePassword = (length = 12) => {
-  const lowerChars = 'abcdefghijklmnopqrstuvwxyz';
-  const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const numbers = '0123456789';
-  const specialChars = '!@#$%^&*()_-+=<>?';
+export const getInitials = (name) => {
+  if (!name) return '';
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) {
+    return parts[0].charAt(0).toUpperCase();
+  }
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
+
+/**
+ * Get a color for user avatar background based on name
+ * @param {string} name User's name
+ * @returns {string} CSS class name for background color
+ */
+export const getAvatarBg = (name) => {
+  if (!name) return 'bg-gray-400';
   
-  const allChars = lowerChars + upperChars + numbers + specialChars;
-  let password = '';
-  
-  // Ensure at least one of each type
-  password += lowerChars[Math.floor(Math.random() * lowerChars.length)];
-  password += upperChars[Math.floor(Math.random() * upperChars.length)];
-  password += numbers[Math.floor(Math.random() * numbers.length)];
-  password += specialChars[Math.floor(Math.random() * specialChars.length)];
-  
-  // Fill the rest with random characters
-  for (let i = 4; i < length; i++) {
-    password += allChars[Math.floor(Math.random() * allChars.length)];
+  // Simple hash function to ensure consistent colors
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  // Shuffle the password
-  return password.split('').sort(() => 0.5 - Math.random()).join('');
+  // Color options
+  const colors = [
+    'bg-indigo-500',
+    'bg-blue-500',
+    'bg-purple-500',
+    'bg-green-500',
+    'bg-red-500',
+    'bg-yellow-500',
+    'bg-pink-500',
+    'bg-teal-500'
+  ];
+  
+  // Get color based on hash
+  return colors[Math.abs(hash) % colors.length];
+};
+
+/**
+ * Get a color for role badge based on role
+ * @param {string} role User role
+ * @returns {string} CSS class name for badge color
+ */
+export const getRoleBadgeColor = (role) => {
+  switch (role) {
+    case 'superadmin':
+      return 'bg-purple-100 text-purple-800';
+    case 'hod':
+      return 'bg-blue-100 text-blue-800';
+    case 'tt_incharge':
+      return 'bg-green-100 text-green-800';
+    case 'faculty':
+      return 'bg-gray-100 text-gray-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
 };

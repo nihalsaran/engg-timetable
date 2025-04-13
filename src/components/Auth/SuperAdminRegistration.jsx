@@ -77,13 +77,17 @@ const SuperAdminRegistration = () => {
         const result = await registerSuperAdmin(userData);
         console.log('SuperAdmin registration successful:', result);
         
-        // Always navigate to login page after successful registration
-        // The session creation might have failed, so user should log in manually
-        navigate('/login', { 
-          state: { 
-            message: 'SuperAdmin account created successfully! Please log in with your new account.' 
-          } 
-        });
+        // Navigate directly to super admin dashboard if session was created
+        if (result.sessionCreated) {
+          navigate('/admin/dashboard');
+        } else {
+          // Fallback to login if session creation failed
+          navigate('/login', { 
+            state: { 
+              message: 'SuperAdmin account created successfully! Please log in with your new account.' 
+            } 
+          });
+        }
       } catch (error) {
         console.error('Registration failed:', error);
         setRegistrationError(error.message || 'Registration failed. Please try again.');

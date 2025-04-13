@@ -20,6 +20,7 @@
     "@tremor/react": "^3.18.7",
     "appwrite": "^17.0.1",
     "d3": "^7.9.0",
+    "firebase": "^11.6.0",
     "formik": "^2.4.6",
     "framer-motion": "^12.6.3",
     "i": "^0.3.7",

@@ -26,6 +26,8 @@ import RoomAvailability from './components/TTIncharge/RoomAvailability'
 import FacultyTimetable from './components/TTIncharge/FacultyTimetable'
 // Import authentication functions
 import { getCurrentUser, checkSession, initializeAuth } from './components/Auth/services/Login'
+// Import Firebase auth for auth state changes
+import { auth, onAuthStateChanged } from './firebase/config.js'
 
 // Create Authentication Context
 export const AuthContext = createContext(null);
@@ -51,7 +53,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     // Redirect to appropriate dashboard based on role
     switch (user.role) {
-      case 'admin':
+      case 'superadmin':
         return <Navigate to="/admin/dashboard" replace />;
       case 'hod':
         return <Navigate to="/hod/dashboard" replace />;
@@ -69,26 +71,38 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   // Check authentication status on app load
   useEffect(() => {
     const verifyAuth = async () => {
       try {
-        // Initialize authentication from stored session if available
+        // Initialize Firebase auth listener
         initializeAuth();
         
-        const isLoggedIn = await checkSession();
-        if (isLoggedIn) {
-          const userData = await getCurrentUser();
-          setUser(userData);
-        }
+        // Set up Firebase auth state listener
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          if (firebaseUser) {
+            // User is signed in, get their complete profile
+            const userData = await getCurrentUser();
+            setUser(userData);
+          } else {
+            // User is signed out
+            setUser(null);
+          }
+          setLoading(false);
+          setSessionChecked(true);
+        });
+        
+        // Clean up the listener when component unmounts
+        return () => unsubscribe();
+        
       } catch (error) {
         console.error("Authentication verification failed:", error);
         // Clear any invalid auth data
-        localStorage.removeItem('appwriteSession');
         localStorage.removeItem('userData');
-      } finally {
         setLoading(false);
+        setSessionChecked(true);
       }
     };
     
@@ -117,7 +131,7 @@ function App() {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading }}>
+    <AuthContext.Provider value={{ user, setUser, loading, sessionChecked }}>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -163,7 +177,7 @@ function App() {
           <Route 
             path="/admin/*" 
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={['superadmin']}>
                 <SuperAdminLayout />
               </ProtectedRoute>
             }

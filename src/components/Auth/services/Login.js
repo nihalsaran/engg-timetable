@@ -1,9 +1,13 @@
 // Authentication service for login functionality
-import { account } from '../../../appwrite/config';
-import { AppwriteException } from 'appwrite';
+import { 
+  auth, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged,
+  signOut
+} from '../../../firebase/config.js';
+import { db, doc, getDoc } from '../../../firebase/config.js';
 
 // Session storage keys
-const SESSION_KEY = 'appwriteSession';
 const USER_DATA_KEY = 'userData';
 
 /**
@@ -16,26 +20,31 @@ const USER_DATA_KEY = 'userData';
  */
 export const loginUser = async (credentials) => {
   try {
-    // Create an email session with Appwrite
-    const session = await account.createEmailSession(
+    // Sign in with Firebase Authentication
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
       credentials.email,
       credentials.password
     );
     
-    // Get account information after successful login
-    const userData = await account.get();
+    const user = userCredential.user;
     
-    // Store session data in localStorage for persistence
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    // Get user profile data from Firestore
+    const userProfileRef = doc(db, 'profiles', user.uid);
+    const userProfileSnap = await getDoc(userProfileRef);
+    
+    let role = 'faculty'; // Default role
+    
+    if (userProfileSnap.exists()) {
+      // If profile exists in Firestore, use role from there
+      role = userProfileSnap.data().role;
+    }
     
     const userObject = {
-      id: userData.$id,
-      email: userData.email,
-      name: userData.name,
-      // The role information would need to come from a custom attribute or a separate database
-      role: userData.labels?.includes('admin') ? 'admin' : 
-            userData.labels?.includes('hod') ? 'hod' : 
-            userData.labels?.includes('tt_incharge') ? 'tt_incharge' : 'faculty',
+      id: user.uid,
+      email: user.email,
+      name: user.displayName || '',
+      role: role,
       isAuthenticated: true
     };
     
@@ -45,18 +54,18 @@ export const loginUser = async (credentials) => {
     return userObject;
   } catch (error) {
     console.error('Authentication failed:', error);
-    if (error instanceof AppwriteException) {
-      // Handle specific Appwrite errors
-      switch (error.code) {
-        case 401:
-          throw new Error('Invalid credentials. Please check your email and password.');
-        case 429:
-          throw new Error('Too many attempts. Please try again later.');
-        default:
-          throw new Error('Login failed. ' + error.message);
-      }
+    
+    // Handle Firebase Auth errors
+    switch (error.code) {
+      case 'auth/invalid-credential':
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+        throw new Error('Invalid credentials. Please check your email and password.');
+      case 'auth/too-many-requests':
+        throw new Error('Too many attempts. Please try again later.');
+      default:
+        throw new Error('Login failed. ' + error.message);
     }
-    throw new Error('Login failed. Please check your credentials and try again.');
   }
 };
 
@@ -66,11 +75,10 @@ export const loginUser = async (credentials) => {
  */
 export const logoutUser = async () => {
   try {
-    // Delete the current session
-    await account.deleteSession('current');
+    // Sign out from Firebase
+    await signOut(auth);
     
     // Clear local storage
-    localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(USER_DATA_KEY);
     
     return true;
@@ -78,7 +86,6 @@ export const logoutUser = async () => {
     console.error('Logout failed:', error);
     
     // Even if server logout fails, clear local storage
-    localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(USER_DATA_KEY);
     
     throw new Error('Logout failed: ' + error.message);
@@ -98,29 +105,46 @@ export const getCurrentUser = async () => {
       return JSON.parse(cachedUserData);
     }
     
-    // If no cached data, try to get from server
-    const userData = await account.get();
-    
-    const userObject = {
-      id: userData.$id,
-      email: userData.email,
-      name: userData.name,
-      role: userData.labels?.includes('admin') ? 'admin' : 
-            userData.labels?.includes('hod') ? 'hod' : 
-            userData.labels?.includes('tt_incharge') ? 'tt_incharge' : 'faculty',
-      isAuthenticated: true
-    };
-    
-    // Update cache
-    localStorage.setItem(USER_DATA_KEY, JSON.stringify(userObject));
-    
-    return userObject;
+    // Check if user is authenticated with Firebase
+    return new Promise((resolve, reject) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        unsubscribe();
+        
+        if (!user) {
+          resolve(null);
+          return;
+        }
+        
+        try {
+          // Get user profile from Firestore
+          const userProfileRef = doc(db, 'profiles', user.uid);
+          const userProfileSnap = await getDoc(userProfileRef);
+          
+          let role = 'faculty'; // Default role
+          if (userProfileSnap.exists()) {
+            role = userProfileSnap.data().role;
+          }
+          
+          const userObject = {
+            id: user.uid,
+            email: user.email,
+            name: user.displayName || '',
+            role: role,
+            isAuthenticated: true
+          };
+          
+          // Update cache
+          localStorage.setItem(USER_DATA_KEY, JSON.stringify(userObject));
+          
+          resolve(userObject);
+        } catch (error) {
+          reject(error);
+        }
+      }, reject);
+    });
   } catch (error) {
-    // If API call fails, clear any stale data
-    localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(USER_DATA_KEY);
-    
     // User is not logged in
+    localStorage.removeItem(USER_DATA_KEY);
     return null;
   }
 };
@@ -131,38 +155,25 @@ export const getCurrentUser = async () => {
  */
 export const checkSession = async () => {
   try {
-    // First check if we have a session in localStorage
-    const sessionData = localStorage.getItem(SESSION_KEY);
-    if (!sessionData) {
-      return false;
-    }
-    
-    // Verify with server that the session is still valid
-    await account.get();
-    return true;
+    return new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        unsubscribe();
+        resolve(!!user);
+      });
+    });
   } catch (error) {
     // Session is invalid, clean up
-    localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(USER_DATA_KEY);
     return false;
   }
 };
 
 /**
- * Initialize client with JWT if available
+ * Initialize client with Firebase Auth if available
  * Call this when the application starts
  */
 export const initializeAuth = () => {
-  try {
-    const sessionData = localStorage.getItem(SESSION_KEY);
-    if (sessionData) {
-      // Session exists, we're potentially logged in
-      // The Appwrite SDK will automatically use the stored cookies
-      console.log('Session found, user might be authenticated');
-      return true;
-    }
-  } catch (error) {
-    console.error('Error initializing auth:', error);
-  }
-  return false;
+  // Firebase Auth will automatically restore authentication state
+  // Nothing additional needed here
+  return true;
 };
