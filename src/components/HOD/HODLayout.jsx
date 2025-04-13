@@ -1,11 +1,13 @@
 // filepath: /Users/nihalsarandasduggirala/Downloads/engg-timetable/src/components/HODLayout.jsx
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar, FiBell, FiSearch, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar, FiBell, FiSearch, FiChevronDown, FiChevronUp, FiLogOut } from 'react-icons/fi';
+import { logoutUser } from '../Auth/services/Login';
 
 export default function HODLayout() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
   const [semesterDropdownOpen, setSemesterDropdownOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState('Spring 2025');
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,17 +20,33 @@ export default function HODLayout() {
     'Fall 2023'
   ];
   
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
-    const closeDropdown = (e) => {
+    const closeDropdowns = (e) => {
       if (!e.target.closest('.semester-dropdown')) {
         setSemesterDropdownOpen(false);
       }
+      if (!e.target.closest('.profile-dropdown')) {
+        setProfileDropdownOpen(false);
+      }
     };
     
-    document.addEventListener('mousedown', closeDropdown);
-    return () => document.removeEventListener('mousedown', closeDropdown);
+    document.addEventListener('mousedown', closeDropdowns);
+    return () => document.removeEventListener('mousedown', closeDropdowns);
   }, []);
+  
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      // Redirect to login page after successful logout
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Show error message to user
+      alert('Logout failed. Please try again.');
+    }
+  };
   
   // Set active item based on current path
   useEffect(() => {
@@ -136,16 +154,43 @@ export default function HODLayout() {
                 3
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <img
-                src="https://via.placeholder.com/40"
-                alt="Profile"
-                className="rounded-full h-10 w-10 object-cover border-2 border-teal-500"
-              />
-              <div className="hidden md:block">
-                <p className="text-sm font-medium">Dr. Sarah Johnson</p>
-                <p className="text-xs text-gray-500">HOD, Computer Science</p>
+            <div className="relative profile-dropdown">
+              <div 
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              >
+                <img
+                  src="https://via.placeholder.com/40"
+                  alt="Profile"
+                  className="rounded-full h-10 w-10 object-cover border-2 border-teal-500"
+                />
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium">Dr. Sarah Johnson</p>
+                  <p className="text-xs text-gray-500">HOD, Computer Science</p>
+                </div>
+                {profileDropdownOpen ? 
+                  <FiChevronUp className="text-gray-500" /> : 
+                  <FiChevronDown className="text-gray-500" />
+                }
               </div>
+              
+              {profileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-20">
+                  <div className="px-4 py-3 border-b">
+                    <p className="text-sm font-medium">Dr. Sarah Johnson</p>
+                    <p className="text-xs text-gray-500">sarah.johnson@example.com</p>
+                  </div>
+                  <div className="py-1">
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50"
+                    >
+                      <FiLogOut size={16} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>

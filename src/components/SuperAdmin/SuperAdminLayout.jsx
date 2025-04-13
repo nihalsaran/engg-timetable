@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { FiMenu, FiBell, FiSearch, FiUser, FiUsers, FiGrid, FiLayers, FiHome, FiFileText, FiSettings, FiBookOpen } from 'react-icons/fi';
+import { FiMenu, FiBell, FiSearch, FiUser, FiUsers, FiGrid, FiLayers, FiHome, FiFileText, FiSettings, FiBookOpen, FiLogOut, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { logoutUser } from '../Auth/services/Login';
 
 const navItems = [
   { label: 'Dashboard', icon: <FiGrid />, path: '/admin/dashboard' },
@@ -14,8 +15,34 @@ const navItems = [
 
 export default function SuperAdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      // Redirect to login page after successful logout
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Show error message to user
+      alert('Logout failed. Please try again.');
+    }
+  };
+  
+  // Close dropdown when clicking outside
+  useState(() => {
+    const closeDropdown = (e) => {
+      if (!e.target.closest('.profile-dropdown')) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', closeDropdown);
+    return () => document.removeEventListener('mousedown', closeDropdown);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -55,11 +82,36 @@ export default function SuperAdminLayout() {
           </div>
           <div className="flex items-center gap-4">
             <FiBell size={20} className="cursor-pointer" />
-            <div className="relative">
-              <button className="flex items-center gap-2">
+            <div className="relative profile-dropdown">
+              <button 
+                className="flex items-center gap-2"
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              >
                 <img src="https://via.placeholder.com/30" alt="avatar" className="rounded-full" />
                 <span className="hidden md:block">Profile</span>
+                {profileDropdownOpen ? 
+                  <FiChevronUp className="text-gray-500" /> : 
+                  <FiChevronDown className="text-gray-500" />
+                }
               </button>
+              
+              {profileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-20">
+                  <div className="px-4 py-3 border-b">
+                    <p className="text-sm font-medium">Admin User</p>
+                    <p className="text-xs text-gray-500">admin@example.com</p>
+                  </div>
+                  <div className="py-1">
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50"
+                    >
+                      <FiLogOut size={16} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
