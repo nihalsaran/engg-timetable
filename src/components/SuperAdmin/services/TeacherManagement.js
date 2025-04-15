@@ -1,20 +1,10 @@
-// Removed import authService from '../../../appwrite/auth';
-// Added mock auth service for temporary use
-const mockAuthService = {
-  createAccount: async (email, password, name) => {
-    console.log('Mock auth: Creating account for', name, email);
-    // Return a mock successful response
-    return {
-      success: true,
-      user: { 
-        $id: `user-${Math.floor(Math.random() * 10000)}`,
-        name,
-        email
-      },
-      error: null
-    };
-  }
-};
+// TeacherManagement.js - Updated to integrate with Appwrite
+import { databases, ID, Query } from '../../../appwrite/config';
+import { auth, createUserWithEmailAndPassword } from '../../../firebase/config';
+
+// Appwrite database and collection IDs
+const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || 'default';
+const TEACHERS_COLLECTION = 'teachers';
 
 // Subject areas that teachers can specialize in
 export const subjectAreas = [
@@ -44,7 +34,7 @@ export const departments = [
   'Chemical Engineering'
 ];
 
-// Sample teachers data for development
+// Sample teachers data for fallback if Appwrite fails
 export const dummyTeachers = [
   { id: 1, name: 'Dr. Jane Smith', email: 'jane@univ.edu', department: 'Computer Science', expertise: ['Algorithms & Data Structures', 'Artificial Intelligence'], qualification: 'Ph.D Computer Science', experience: 8, active: true },
   { id: 2, name: 'Prof. Michael Johnson', email: 'michael@univ.edu', department: 'Electrical Engineering', expertise: ['Computer Networks', 'Embedded Systems'], qualification: 'Ph.D Electrical Engineering', experience: 12, active: true },
@@ -52,48 +42,59 @@ export const dummyTeachers = [
 ];
 
 /**
- * Fetches all faculty members from the database
+ * Fetches all faculty members from Appwrite
  * @returns {Promise} Promise object with faculty data
  */
 export const fetchTeachers = async () => {
   try {
-    // Using dummy data instead of facultyService
+    const response = await databases.listDocuments(
+      DB_ID,
+      TEACHERS_COLLECTION
+    );
+    
+    const teachers = response.documents.map(doc => ({
+      id: doc.$id,
+      name: doc.name,
+      email: doc.email,
+      department: doc.department,
+      expertise: doc.expertise || [],
+      qualification: doc.qualification,
+      experience: doc.experience,
+      active: doc.active,
+      userId: doc.userId
+    }));
+
     return {
       success: true,
-      teachers: dummyTeachers,
+      teachers,
       error: null
     };
   } catch (error) {
-    console.error('Error fetching teachers:', error);
+    console.error('Error fetching teachers from Appwrite:', error);
     return {
       success: false,
-      teachers: null,
+      teachers: dummyTeachers,
       error: 'Failed to load teachers'
     };
   }
 };
 
 /**
- * Create a new teacher
+ * Create a new teacher using Firebase for auth and Appwrite for data
  * @param {Object} teacherData - The teacher data to create
  * @returns {Promise} Promise object with result
  */
 export const createTeacher = async (teacherData) => {
   try {
-    // Create user account first
+    // Create user account in Firebase Auth
     const { name, email, password } = teacherData;
-    // Using mockAuthService instead of authService
-    const userResult = await mockAuthService.createAccount(email, password, name);
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userId = userCredential.user.uid;
     
-    if (!userResult.success) {
-      throw new Error('Failed to create user account');
-    }
-    
-    // Mock faculty creation instead of using facultyService
-    const newTeacherId = Math.floor(Math.random() * 10000);
+    // Create teacher document in Appwrite
+    const teacherId = ID.unique();
     const facultyData = {
-      id: newTeacherId,
-      userId: userResult.user ? userResult.user.$id : `user-${newTeacherId}`,
+      userId,
       name: teacherData.name,
       email: teacherData.email,
       department: teacherData.department,
@@ -103,12 +104,23 @@ export const createTeacher = async (teacherData) => {
       active: teacherData.active,
       role: 'Faculty',
       maxHours: 40, // Default max teaching hours per week
-      status: 'available'
+      status: 'available',
+      createdAt: new Date().toISOString()
     };
+    
+    const response = await databases.createDocument(
+      DB_ID,
+      TEACHERS_COLLECTION,
+      teacherId,
+      facultyData
+    );
     
     return {
       success: true,
-      faculty: facultyData,
+      faculty: {
+        id: response.$id,
+        ...facultyData
+      },
       error: null
     };
   } catch (error) {
@@ -122,37 +134,46 @@ export const createTeacher = async (teacherData) => {
 };
 
 /**
- * Update an existing teacher
+ * Update an existing teacher in Appwrite
  * @param {string} id - The teacher ID to update
  * @param {Object} teacherData - The teacher data to update
  * @returns {Promise} Promise object with result
  */
 export const updateTeacher = async (id, teacherData) => {
   try {
-    // Mock updating a faculty member instead of using facultyService
-    const facultyData = {
-      id: id,
+    // Password updates should be handled with Firebase Auth
+    if (teacherData.password) {
+      console.log("Password updates should be handled separately with Firebase Auth");
+    }
+    
+    // Update teacher document in Appwrite
+    const updatedData = {
       name: teacherData.name,
       department: teacherData.department,
       expertise: teacherData.expertise,
       qualification: teacherData.qualification,
       experience: parseInt(teacherData.experience),
-      active: teacherData.active
+      active: teacherData.active,
+      updatedAt: new Date().toISOString()
     };
     
-    // Update password if provided 
-    if (teacherData.password) {
-      // Password update logic would go here
-      console.log("Password update would happen here");
-    }
+    const response = await databases.updateDocument(
+      DB_ID,
+      TEACHERS_COLLECTION,
+      id,
+      updatedData
+    );
     
     return {
       success: true,
-      faculty: facultyData,
+      faculty: {
+        id: response.$id,
+        ...updatedData
+      },
       error: null
     };
   } catch (error) {
-    console.error('Error updating teacher:', error);
+    console.error('Error updating teacher in Appwrite:', error);
     return {
       success: false,
       faculty: null,
@@ -162,19 +183,25 @@ export const updateTeacher = async (id, teacherData) => {
 };
 
 /**
- * Delete a teacher
+ * Delete a teacher from Appwrite
  * @param {string} id - The teacher ID to delete
  * @returns {Promise} Promise object with result
  */
 export const deleteTeacher = async (id) => {
   try {
-    // Mock deleting a faculty member instead of using facultyService
+    // Note: This only removes the teacher from Appwrite, not from Firebase Auth
+    await databases.deleteDocument(
+      DB_ID,
+      TEACHERS_COLLECTION,
+      id
+    );
+    
     return {
       success: true,
       error: null
     };
   } catch (error) {
-    console.error('Error deleting teacher:', error);
+    console.error('Error deleting teacher from Appwrite:', error);
     return {
       success: false,
       error: error.message || 'Failed to delete teacher'
@@ -183,7 +210,7 @@ export const deleteTeacher = async (id) => {
 };
 
 /**
- * Process faculty bulk import from JSON file
+ * Process faculty bulk import from JSON file using Appwrite
  * @param {Array} jsonData - Array of faculty data from JSON file
  * @returns {Promise} Promise with results of import operation
  */
@@ -208,14 +235,42 @@ export const processFacultyImport = async (jsonData) => {
       }
       
       try {
-        // Mock creating user account instead of actually creating one
-        const mockUserId = `user-${Math.floor(Math.random() * 10000)}`;
+        // Create user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(
+          auth, 
+          faculty.email, 
+          faculty.password || 'DefaultPass123!'
+        );
+        const userId = userCredential.user.uid;
+        
+        // Create teacher document in Appwrite
+        const teacherId = ID.unique();
+        const facultyData = {
+          userId,
+          name: faculty.name,
+          email: faculty.email,
+          department: faculty.department,
+          expertise: faculty.expertise || [],
+          qualification: faculty.qualification || '',
+          experience: parseInt(faculty.experience) || 0,
+          active: faculty.active !== undefined ? faculty.active : true,
+          role: 'Faculty',
+          maxHours: faculty.maxHours || 40, // Default max teaching hours per week
+          status: 'available',
+          createdAt: new Date().toISOString()
+        };
+        
+        await databases.createDocument(
+          DB_ID,
+          TEACHERS_COLLECTION,
+          teacherId,
+          facultyData
+        );
         
         results.push({
           name: faculty.name,
           success: true
         });
-        
       } catch (err) {
         results.push({
           name: faculty.name,

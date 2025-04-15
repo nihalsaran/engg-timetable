@@ -3,7 +3,7 @@ import { FiPlus, FiEdit2, FiTrash2, FiEye, FiEyeOff, FiUser, FiBookOpen, FiAward
 import TeacherManagementService from './services/TeacherManagement';
 
 export default function TeacherManagement() {
-  const [teachers, setTeachers] = useState(TeacherManagementService.dummyTeachers);
+  const [teachers, setTeachers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -25,10 +25,10 @@ export default function TeacherManagement() {
 
   // Function to fetch all teachers on component mount
   useEffect(() => {
-    // Uncomment when ready to integrate with backend
-    // fetchTeachers();
+    fetchTeachers();
   }, []);
 
+  // Handle clicks outside tooltip
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (tooltipRef.current && !tooltipRef.current.contains(event.target)) {
@@ -54,10 +54,14 @@ export default function TeacherManagement() {
         setTeachers(response.teachers);
       } else {
         setError(response.error || 'Failed to load teachers');
+        // Use dummy data as fallback
+        setTeachers(TeacherManagementService.dummyTeachers);
       }
     } catch (error) {
       setError('Failed to load teachers');
       console.error(error);
+      // Use dummy data as fallback
+      setTeachers(TeacherManagementService.dummyTeachers);
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +73,7 @@ export default function TeacherManagement() {
       setFormData({
         name: teacher.name,
         email: teacher.email,
-        password: '',
+        password: '', // Don't populate password for security
         department: teacher.department,
         expertise: teacher.expertise || [],
         qualification: teacher.qualification || '',

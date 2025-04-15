@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FiPlus, FiEdit, FiTrash2, FiSearch, FiX, FiHome, FiUsers, FiMonitor, FiWifi, FiThermometer, FiSave, FiUpload, FiInfo, FiDownload } from 'react-icons/fi';
 import { 
-  getRooms, 
-  addRoom, 
+  getAllRooms, 
+  createRoom, 
   updateRoom, 
   deleteRoom, 
   filterRooms, 
@@ -54,7 +54,7 @@ export default function RoomManagement() {
     department: 'Computer Science'
   });
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -62,10 +62,24 @@ export default function RoomManagement() {
 
   // Initialize rooms on component mount
   useEffect(() => {
-    const allRooms = getRooms();
-    setRooms(allRooms);
-    setFilteredRooms(allRooms);
+    fetchRooms();
   }, []);
+
+  // Fetch rooms from Appwrite
+  const fetchRooms = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const allRooms = await getAllRooms();
+      setRooms(allRooms);
+      setFilteredRooms(allRooms);
+    } catch (err) {
+      setError("Failed to fetch rooms: " + err.message);
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle outside clicks to close tooltip
   useEffect(() => {
@@ -128,7 +142,7 @@ export default function RoomManagement() {
   const openEditRoomModal = (room) => {
     setEditingRoom(room);
     setFormData({
-      roomNumber: room.roomNumber,
+      roomNumber: room.roomNumber || room.number,
       capacity: room.capacity,
       features: [...room.features],
       department: room.department
@@ -137,30 +151,66 @@ export default function RoomManagement() {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (editingRoom) {
-      // Update existing room
-      const updatedRoom = updateRoom(editingRoom.id, formData);
-      if (updatedRoom) {
-        setRooms(getRooms());
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      if (editingRoom) {
+        // Update existing room
+        const roomData = {
+          id: editingRoom.id,
+          number: formData.roomNumber,
+          capacity: parseInt(formData.capacity),
+          features: [...formData.features],
+          department: formData.department
+        };
+        
+        await updateRoom(roomData);
+      } else {
+        // Add new room
+        const roomData = {
+          number: formData.roomNumber,
+          capacity: parseInt(formData.capacity),
+          features: [...formData.features],
+          department: formData.department
+        };
+        
+        await createRoom(roomData);
       }
-    } else {
-      // Add new room
-      const newRoom = addRoom(formData);
-      if (newRoom) {
-        setRooms(getRooms());
-      }
+      
+      // Refresh rooms after update
+      await fetchRooms();
+      setShowModal(false);
+    } catch (err) {
+      setError("Failed to save room: " + err.message);
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
-    setShowModal(false);
   };
 
   // Delete a room
-  const handleDeleteRoom = (id) => {
-    const success = deleteRoom(id);
-    if (success) {
-      setRooms(getRooms());
+  const handleDeleteRoom = async (id) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const result = await deleteRoom(id);
+      
+      if (result.success) {
+        // Refresh rooms after deletion
+        await fetchRooms();
+      } else {
+        setError("Failed to delete room: " + result.error);
+      }
+    } catch (err) {
+      setError("Failed to delete room: " + err.message);
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -203,9 +253,7 @@ export default function RoomManagement() {
             }
             
             // Refresh rooms list
-            const allRooms = getRooms();
-            setRooms(allRooms);
-            setFilteredRooms(allRooms);
+            await fetchRooms();
           } else {
             setError(result.error || 'Error processing data');
           }
@@ -334,6 +382,13 @@ export default function RoomManagement() {
         </div>
       </div>
       
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="flex justify-center my-8">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-500"></div>
+        </div>
+      )}
+      
       {/* Rooms Table */}
       <div className="bg-white rounded-2xl shadow-md overflow-hidden">
         <div className="overflow-x-auto">
@@ -351,11 +406,11 @@ export default function RoomManagement() {
               {filteredRooms.length > 0 ? (
                 filteredRooms.map((room, index) => (
                   <tr key={room.id} className={`hover:bg-gray-50 transition ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-teal-700">{room.roomNumber}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-teal-700">{room.roomNumber || room.number}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{room.capacity} Seats</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {room.features.map((feature) => {
+                        {room.features && room.features.map((feature) => {
                           const featureObj = featureOptions.find(f => f.id === feature);
                           return (
                             <span 
@@ -396,6 +451,12 @@ export default function RoomManagement() {
                     </td>
                   </tr>
                 ))
+              ) : isLoading ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-10 text-center text-gray-500">
+                    Loading rooms...
+                  </td>
+                </tr>
               ) : (
                 <tr>
                   <td colSpan="5" className="px-6 py-10 text-center text-gray-500">

@@ -18,8 +18,15 @@ export default function DepartmentManagement() {
 
   useEffect(() => {
     // Load initial data
-    setDepartments(getAllDepartments());
-    setHodOptions(getHODOptions());
+    const fetchData = async () => {
+      const depts = await getAllDepartments();
+      setDepartments(depts);
+      
+      const hods = await getHODOptions();
+      setHodOptions(hods);
+    };
+    
+    fetchData();
   }, []);
 
   const openModal = () => setShowModal(true);
@@ -29,33 +36,33 @@ export default function DepartmentManagement() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const newDepartment = createDepartment(formData);
+    const newDepartment = await createDepartment(formData);
     setDepartments([...departments, newDepartment]);
     setFormData({ name: '', type: '', hod: '', description: '' });
     closeModal();
   };
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     const term = e.target.value;
     setSearchTerm(term);
-    const filtered = searchDepartments(term);
+    const filtered = await searchDepartments(term);
     setDepartments(filtered);
   };
 
-  const handleEdit = (dept) => {
+  const handleEdit = async (dept) => {
     // In a real app, you might open an edit modal here
     console.log('Edit department:', dept);
-    const updated = updateDepartment(dept);
+    const updated = await updateDepartment(dept);
     if (updated) {
       setDepartments(departments.map(d => d.id === updated.id ? updated : d));
     }
   };
 
-  const handleDelete = (id) => {
-    const deleted = deleteDepartment(id);
-    if (deleted) {
+  const handleDelete = async (id) => {
+    const result = await deleteDepartment(id);
+    if (result.success) {
       setDepartments(departments.filter(dept => dept.id !== id));
     }
   };
