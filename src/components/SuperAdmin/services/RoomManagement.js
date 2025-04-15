@@ -369,7 +369,8 @@ export const createRoom = async (roomData) => {
       status: roomData.status || 'Available',
       department: roomData.department,
       features: roomData.features || [],
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     const response = await databases.createDocument(
