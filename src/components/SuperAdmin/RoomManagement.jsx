@@ -7,9 +7,9 @@ import {
   updateRoom, 
   deleteRoom, 
   filterRooms, 
-  departmentOptions, 
+  facultyOptions, 
   featureOptions as serviceFeatureOptions,
-  getDepartmentColorClass,
+  getFacultyColorClass,
   getExampleJSONDataset,
   processRoomImport
 } from './services/RoomManagement';
@@ -42,7 +42,7 @@ export default function RoomManagement() {
   // State variables
   const [rooms, setRooms] = useState([]);
   const [filteredRooms, setFilteredRooms] = useState([]);
-  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedFaculty, setSelectedFaculty] = useState('');
   const [selectedFeature, setSelectedFeature] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -51,7 +51,7 @@ export default function RoomManagement() {
     roomNumber: '',
     capacity: '',
     features: [],
-    department: 'Computer Science'
+    faculty: 'Faculty of Engineering'
   });
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,12 +102,12 @@ export default function RoomManagement() {
   // Filter rooms whenever filter parameters change
   useEffect(() => {
     const filtered = filterRooms(rooms, {
-      department: selectedDepartment,
+      faculty: selectedFaculty,
       feature: selectedFeature,
       searchTerm: searchTerm
     });
     setFilteredRooms(filtered);
-  }, [rooms, selectedDepartment, selectedFeature, searchTerm]);
+  }, [rooms, selectedFaculty, selectedFeature, searchTerm]);
 
   // Handle input changes in form
   const handleChange = (e) => {
@@ -133,7 +133,7 @@ export default function RoomManagement() {
       roomNumber: '',
       capacity: '',
       features: [],
-      department: 'Computer Science'
+      faculty: 'Faculty of Engineering'
     });
     setShowModal(true);
   };
@@ -145,7 +145,7 @@ export default function RoomManagement() {
       roomNumber: room.roomNumber || room.number,
       capacity: room.capacity,
       features: [...room.features],
-      department: room.department
+      faculty: room.faculty
     });
     setShowModal(true);
   };
@@ -165,7 +165,7 @@ export default function RoomManagement() {
           number: formData.roomNumber,
           capacity: parseInt(formData.capacity),
           features: [...formData.features],
-          department: formData.department
+          faculty: formData.faculty
         };
         
         await updateRoom(roomData);
@@ -175,7 +175,7 @@ export default function RoomManagement() {
           number: formData.roomNumber,
           capacity: parseInt(formData.capacity),
           features: [...formData.features],
-          department: formData.department
+          faculty: formData.faculty
         };
         
         await createRoom(roomData);
@@ -216,7 +216,7 @@ export default function RoomManagement() {
 
   // Reset all filters
   const resetFilters = () => {
-    setSelectedDepartment('');
+    setSelectedFaculty('');
     setSelectedFeature('');
     setSearchTerm('');
   };
@@ -304,17 +304,17 @@ export default function RoomManagement() {
       <div className="bg-white rounded-2xl p-5 shadow-md mb-6">
         <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
           <div className="flex flex-1 flex-col md:flex-row gap-4 w-full lg:w-auto">
-            {/* Department Filter */}
+            {/* Faculty Filter */}
             <div className="relative flex-1">
-              <label className="block text-sm font-medium text-gray-600 mb-1">Department</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Faculty</label>
               <select
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
+                value={selectedFaculty}
+                onChange={(e) => setSelectedFaculty(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               >
-                <option value="">All Departments</option>
-                {departmentOptions.map((department) => (
-                  <option key={department} value={department}>{department}</option>
+                <option value="">All Faculties</option>
+                {facultyOptions.map((faculty) => (
+                  <option key={faculty} value={faculty}>{faculty}</option>
                 ))}
               </select>
             </div>
@@ -341,7 +341,7 @@ export default function RoomManagement() {
                 <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by room number or department..."
+                  placeholder="Search by room number or faculty..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
@@ -360,7 +360,7 @@ export default function RoomManagement() {
           
           <div className="flex gap-2 w-full lg:w-auto justify-end">
             {/* Reset Filters Button */}
-            {(selectedDepartment || selectedFeature || searchTerm) && (
+            {(selectedFaculty || selectedFeature || searchTerm) && (
               <button
                 onClick={resetFilters}
                 className="px-4 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition flex items-center gap-2"
@@ -398,7 +398,7 @@ export default function RoomManagement() {
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Room Number</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Capacity</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Features</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Department</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Faculty</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -427,8 +427,8 @@ export default function RoomManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDepartmentColorClass(room.department)}`}>
-                        {room.department}
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getFacultyColorClass(room.faculty)}`}>
+                        {room.faculty}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -555,21 +555,21 @@ export default function RoomManagement() {
                   </div>
                 </div>
                 
-                {/* Department */}
+                {/* Faculty */}
                 <div className="relative">
                   <div className="flex items-center mb-1">
                     <FiUsers size={16} className="text-teal-600 mr-2" />
-                    <label className="block text-sm font-medium text-gray-600">Department</label>
+                    <label className="block text-sm font-medium text-gray-600">Faculty</label>
                   </div>
                   <select
-                    name="department"
-                    value={formData.department}
+                    name="faculty"
+                    value={formData.faculty}
                     onChange={handleChange}
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   >
-                    {departmentOptions.map((department) => (
-                      <option key={department} value={department}>{department}</option>
+                    {facultyOptions.map((faculty) => (
+                      <option key={faculty} value={faculty}>{faculty}</option>
                     ))}
                   </select>
                 </div>

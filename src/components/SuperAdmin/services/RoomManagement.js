@@ -12,35 +12,35 @@ const dummyRooms = [
     roomNumber: 'CS101', 
     capacity: 60,
     features: ['Projector', 'AC', 'Wi-Fi'],
-    department: 'Computer Science'
+    faculty: 'Faculty of Engineering'
   },
   { 
     id: '2', 
     roomNumber: 'LH201', 
     capacity: 120,
     features: ['Projector', 'SmartBoard', 'Audio System', 'AC', 'Wi-Fi'],
-    department: 'Mechanical'
+    faculty: 'Faculty of Engineering'
   },
   { 
     id: '3', 
     roomNumber: 'LAB302', 
     capacity: 40,
     features: ['Computers', 'Projector', 'AC', 'Wi-Fi'],
-    department: 'Electronics'
+    faculty: 'Faculty of Science'
   },
   { 
     id: '4', 
     roomNumber: 'PH101', 
     capacity: 30,
     features: ['Audio System', 'Wi-Fi'],
-    department: 'Physics'
+    faculty: 'Faculty of Science'
   },
   { 
     id: '5', 
     roomNumber: 'CH202', 
     capacity: 35,
     features: ['Audio System', 'SmartBoard'],
-    department: 'Chemistry'
+    faculty: 'Faculty of Social Science'
   },
 ];
 
@@ -76,17 +76,17 @@ export const statusOptions = [
   'Reserved'
 ];
 
-// Department options for dropdown
-export const departmentOptions = [
-  'Computer Science',
-  'Mechanical',
-  'Electronics',
-  'Electrical',
-  'Civil',
-  'Information Technology',
-  'Physics',
-  'Chemistry',
-  'Mathematics'
+// Faculty options for dropdown (renamed from departmentOptions)
+export const facultyOptions = [
+  'Faculty of Engineering',
+  'Faculty of Science',
+  'Faculty of Social Science',
+  'Faculty of Arts',
+  'Faculty of Management',
+  'Faculty of Law',
+  'Faculty of Medicine',
+  'Faculty of Education',
+  'Common Facilities'
 ];
 
 // Feature options with name and id
@@ -100,24 +100,24 @@ export const featureOptions = [
 ];
 
 /**
- * Get department color class based on department name
- * @param {string} department - Department name
+ * Get faculty color class based on faculty name
+ * @param {string} faculty - Faculty name
  * @returns {string} CSS class for color
  */
-export const getDepartmentColorClass = (department) => {
+export const getFacultyColorClass = (faculty) => {
   const colorMap = {
-    'Computer Science': 'bg-blue-100 text-blue-800',
-    'Mechanical': 'bg-orange-100 text-orange-800',
-    'Electronics': 'bg-green-100 text-green-800',
-    'Electrical': 'bg-purple-100 text-purple-800',
-    'Civil': 'bg-yellow-100 text-yellow-800',
-    'Information Technology': 'bg-indigo-100 text-indigo-800',
-    'Physics': 'bg-red-100 text-red-800',
-    'Chemistry': 'bg-teal-100 text-teal-800',
-    'Mathematics': 'bg-pink-100 text-pink-800'
+    'Faculty of Engineering': 'bg-blue-100 text-blue-800',
+    'Faculty of Science': 'bg-green-100 text-green-800',
+    'Faculty of Social Science': 'bg-orange-100 text-orange-800',
+    'Faculty of Arts': 'bg-purple-100 text-purple-800',
+    'Faculty of Management': 'bg-yellow-100 text-yellow-800',
+    'Faculty of Law': 'bg-indigo-100 text-indigo-800',
+    'Faculty of Medicine': 'bg-red-100 text-red-800',
+    'Faculty of Education': 'bg-teal-100 text-teal-800',
+    'Common Facilities': 'bg-gray-100 text-gray-800'
   };
   
-  return colorMap[department] || 'bg-gray-100 text-gray-800';
+  return colorMap[faculty] || 'bg-gray-100 text-gray-800';
 };
 
 /**
@@ -139,7 +139,7 @@ export const addRoom = (roomData) => {
     roomNumber: roomData.roomNumber,
     capacity: parseInt(roomData.capacity),
     features: [...roomData.features],
-    department: roomData.department
+    faculty: roomData.faculty
   };
   
   dummyRooms.push(newRoom);
@@ -157,12 +157,12 @@ export const filterRooms = (rooms, filters = {}) => {
     // Filter by search term
     if (filters.searchTerm && 
         !room.roomNumber.toLowerCase().includes(filters.searchTerm.toLowerCase()) && 
-        !room.department.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+        !room.faculty.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
       return false;
     }
     
-    // Filter by department
-    if (filters.department && room.department !== filters.department) {
+    // Filter by faculty
+    if (filters.faculty && room.faculty !== filters.faculty) {
       return false;
     }
     
@@ -186,13 +186,13 @@ export const getExampleJSONDataset = () => {
         "roomNumber": "CS101",
         "capacity": 60,
         "features": ["Projector", "AC", "Wi-Fi"],
-        "department": "Computer Science"
+        "faculty": "Faculty of Engineering"
       },
       {
         "roomNumber": "LH201",
         "capacity": 120,
         "features": ["Projector", "SmartBoard", "Audio System"],
-        "department": "Mechanical"
+        "faculty": "Faculty of Science"
       }
     ]
   };
@@ -214,7 +214,7 @@ export const processRoomImport = async (jsonData) => {
     for (const roomData of jsonData.rooms) {
       try {
         // Validate required fields
-        if (!roomData.roomNumber || !roomData.capacity || !roomData.department) {
+        if (!roomData.roomNumber || !roomData.capacity || !roomData.faculty) {
           results.push({
             roomNumber: roomData.roomNumber || 'Unknown',
             success: false,
@@ -228,7 +228,7 @@ export const processRoomImport = async (jsonData) => {
           number: roomData.roomNumber,
           capacity: roomData.capacity,
           features: Array.isArray(roomData.features) ? roomData.features : [],
-          department: roomData.department
+          faculty: roomData.faculty
         });
         
         results.push({
@@ -277,7 +277,7 @@ export const getAllRooms = async () => {
       building: room.building,
       floor: room.floor,
       status: room.status || 'Available',
-      department: room.department,
+      faculty: room.faculty,
       features: room.features || []
     }));
   } catch (error) {
@@ -321,6 +321,11 @@ export const filterRoomsAsync = async (searchTerm, filters = {}) => {
         return false;
       }
       
+      // Filter by faculty
+      if (filters.faculty && filters.faculty !== 'All' && room.faculty !== filters.faculty) {
+        return false;
+      }
+      
       return true;
     });
   } catch (error) {
@@ -347,6 +352,10 @@ export const filterRoomsAsync = async (searchTerm, filters = {}) => {
         return false;
       }
       
+      if (filters.faculty && filters.faculty !== 'All' && room.faculty !== filters.faculty) {
+        return false;
+      }
+      
       return true;
     });
   }
@@ -367,7 +376,7 @@ export const createRoom = async (roomData) => {
       building: roomData.building || 'Main Block',
       floor: parseInt(roomData.floor || '1'),
       status: roomData.status || 'Available',
-      department: roomData.department,
+      faculty: roomData.faculty,
       features: roomData.features || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -408,7 +417,7 @@ export const updateRoom = async (roomData) => {
       building: roomData.building || 'Main Block',
       floor: parseInt(roomData.floor || '1'),
       status: roomData.status || 'Available',
-      department: roomData.department,
+      faculty: roomData.faculty,
       features: roomData.features || [],
       updatedAt: new Date().toISOString()
     };
@@ -460,9 +469,9 @@ const RoomManagementService = {
   roomTypes,
   buildings,
   statusOptions,
-  departmentOptions,
+  facultyOptions,
   featureOptions,
-  getDepartmentColorClass,
+  getFacultyColorClass,
   getExampleJSONDataset,
   processRoomImport
 };
