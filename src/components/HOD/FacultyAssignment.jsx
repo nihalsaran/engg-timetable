@@ -5,12 +5,12 @@ import { motion } from 'framer-motion';
 
 // Mock data for courses
 const dummyCourses = [
-  { id: 1, code: 'CS101', title: 'Introduction to Computer Science', semester: 'Fall 2024', weeklyHours: '3L+1T', faculty: null, tags: ['programming', 'introductory'] },
-  { id: 2, code: 'CS202', title: 'Data Structures and Algorithms', semester: 'Spring 2025', weeklyHours: '3L+2P', faculty: null, tags: ['algorithms', 'data structures'] },
-  { id: 3, code: 'CS303', title: 'Database Systems', semester: 'Fall 2024', weeklyHours: '3L+1T+2P', faculty: 7, tags: ['databases', 'SQL'] },
-  { id: 4, code: 'CS405', title: 'Artificial Intelligence', semester: 'Spring 2025', weeklyHours: '4L+2P', faculty: null, tags: ['AI', 'machine learning'] },
-  { id: 5, code: 'CS301', title: 'Software Engineering', semester: 'Fall 2024', weeklyHours: '3L+1T', faculty: 3, tags: ['software', 'project management'] },
-  { id: 6, code: 'CS210', title: 'Computer Networks', semester: 'Spring 2025', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['networking', 'protocols'] },
+  { id: 1, code: 'CS101', title: 'Introduction to Computer Science', semester: 'Semester 6', weeklyHours: '3L+1T', faculty: null, tags: ['programming', 'introductory'] },
+  { id: 2, code: 'CS202', title: 'Data Structures and Algorithms', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: null, tags: ['algorithms', 'data structures'] },
+  { id: 3, code: 'CS303', title: 'Database Systems', semester: 'Semester 6', weeklyHours: '3L+1T+2P', faculty: 7, tags: ['databases', 'SQL'] },
+  { id: 4, code: 'CS405', title: 'Artificial Intelligence', semester: 'Semester 7', weeklyHours: '4L+2P', faculty: null, tags: ['AI', 'machine learning'] },
+  { id: 5, code: 'CS301', title: 'Software Engineering', semester: 'Semester 6', weeklyHours: '3L+1T', faculty: 3, tags: ['software', 'project management'] },
+  { id: 6, code: 'CS210', title: 'Computer Networks', semester: 'Semester 7', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['networking', 'protocols'] },
 ];
 
 // Mock data for faculty

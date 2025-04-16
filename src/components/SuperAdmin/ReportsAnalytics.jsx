@@ -32,7 +32,7 @@ const conflictsData = [
 const COLORS = ['#6366F1', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6'];
 
 // Filter options
-const semesters = ['Spring 2025', 'Fall 2024', 'Summer 2024'];
+const semesters = ['Semester 7', 'Semester 6', 'Semester 5'];
 const departments = ['All Departments', 'CSE', 'ECE', 'MECH', 'CIVIL', 'IT'];
 const faculties = ['All Faculty', 'Senior Professors', 'Associate Professors', 'Assistant Professors', 'Visiting Faculty'];
 

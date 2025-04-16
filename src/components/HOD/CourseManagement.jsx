@@ -65,7 +65,7 @@ const dummyFaculty = [
 ];
 
 // Semester options
-const semesterOptions = ['All Semesters', 'Fall 2024', 'Spring 2025', 'Fall 2025'];
+const semesterOptions = ['All Semesters', 'Semester 6', 'Semester 7', 'Semester 8'];
 
 export default function CourseManagement() {
   // State variables
@@ -163,7 +163,7 @@ export default function CourseManagement() {
       title: '',
       code: '',
       faculty: '',
-      semester: 'Fall 2024',
+      semester: 'Semester 6',
       weeklyHours: '',
       lectureHours: '3',
       tutorialHours: '1',
@@ -746,9 +746,9 @@ export default function CourseManagement() {
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   >
-                    <option value="Fall 2024">Fall 2024</option>
-                    <option value="Spring 2025">Spring 2025</option>
-                    <option value="Fall 2025">Fall 2025</option>
+                    <option value="Semester 6">Semester 6</option>
+                    <option value="Semester 7">Semester 7</option>
+                    <option value="Semester 8">Semester 8</option>
                   </select>
                 </div>
                 

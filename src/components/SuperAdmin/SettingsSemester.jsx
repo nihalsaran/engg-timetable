@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { FiCalendar, FiSettings, FiUsers, FiInfo, FiArrowRight, FiCheck, FiClock, FiEdit } from 'react-icons/fi';
 
 const dummySemesters = [
-  { id: 1, name: 'Spring 2024', status: 'Completed', startDate: '2024-01-15', endDate: '2024-05-15' },
-  { id: 2, name: 'Fall 2024', status: 'Completed', startDate: '2024-08-20', endDate: '2024-12-20' },
-  { id: 3, name: 'Spring 2025', status: 'Current', startDate: '2025-01-15', endDate: '2025-05-15' },
+  { id: 1, name: 'Semester 1', status: 'Completed', startDate: '2024-01-15', endDate: '2024-05-15' },
+  { id: 2, name: 'Semester 2', status: 'Completed', startDate: '2024-08-20', endDate: '2024-12-20' },
+  { id: 3, name: 'Semester 3', status: 'Current', startDate: '2025-01-15', endDate: '2025-05-15' },
 ];
 
 export default function SettingsSemester() {
@@ -334,7 +334,7 @@ export default function SettingsSemester() {
                     name="name"
                     value={newSemester.name}
                     onChange={handleChange}
-                    placeholder="e.g., Fall 2025"
+                    placeholder="e.g., Semester 4"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     required
                   />

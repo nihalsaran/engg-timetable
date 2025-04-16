@@ -6,7 +6,7 @@ export const coursesData = [
     faculty: { id: 1, name: 'Dr. Alex Johnson' }, 
     duration: 1, // in hours
     department: 'Computer Science',
-    semester: 'Spring 2025',
+    semester: 'Semester 7',
     color: 'blue',
     weeklyHours: '3L+1T+0P'  // 3 lectures, 1 tutorial, 0 practical
   },
@@ -16,7 +16,7 @@ export const coursesData = [
     faculty: { id: 2, name: 'Dr. Sarah Miller' }, 
     duration: 2, 
     department: 'Computer Science',
-    semester: 'Spring 2025',
+    semester: 'Semester 7',
     color: 'indigo',
     weeklyHours: '3L+0T+2P'
   },
@@ -26,7 +26,7 @@ export const coursesData = [
     faculty: { id: 3, name: 'Prof. Robert Chen' }, 
     duration: 1, 
     department: 'Computer Science',
-    semester: 'Spring 2025',
+    semester: 'Semester 7',
     color: 'purple',
     weeklyHours: '3L+1T+2P'
   },
@@ -36,7 +36,7 @@ export const coursesData = [
     faculty: { id: 4, name: 'Dr. Emily Zhang' }, 
     duration: 2, 
     department: 'Computer Science',
-    semester: 'Spring 2025',
+    semester: 'Semester 7',
     color: 'green',
     weeklyHours: '4L+0T+2P'
   },
@@ -46,7 +46,7 @@ export const coursesData = [
     faculty: { id: 5, name: 'Prof. Maria Garcia' }, 
     duration: 1, 
     department: 'Electrical Engineering',
-    semester: 'Spring 2025',
+    semester: 'Semester 7',
     color: 'amber',
     weeklyHours: '3L+1T+1P'
   },
@@ -56,7 +56,7 @@ export const coursesData = [
     faculty: { id: 6, name: 'Dr. John Smith' }, 
     duration: 1, 
     department: 'Mechanical Engineering',
-    semester: 'Spring 2025',
+    semester: 'Semester 7',
     color: 'rose',
     weeklyHours: '3L+1T+0P'
   },

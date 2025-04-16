@@ -28,17 +28,17 @@ export default function TTInchargeLayout() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
   const [semesterDropdownOpen, setSemesterDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [selectedSemester, setSelectedSemester] = useState('Spring 2025');
+  const [selectedSemester, setSelectedSemester] = useState('Semester 7');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
   // List of available semesters
   const availableSemesters = [
-    'Spring 2025',
-    'Fall 2024',
-    'Spring 2024',
-    'Fall 2023'
+    'Semester 7',
+    'Semester 6',
+    'Semester 5',
+    'Semester 4'
   ];
   
   // Close dropdowns when clicking outside

@@ -17,7 +17,7 @@ const dummyTimeSlots = [
 const dummyWeekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 const dummyDepartments = ['Computer Science', 'Mechanical Engineering', 'Electrical Engineering', 'Civil Engineering'];
-const dummySemesters = ['Spring 2025', 'Fall 2024', 'Spring 2024'];
+const dummySemesters = ['Semester 7', 'Semester 6', 'Semester 5'];
 
 // Generate random timetable data
 const generateDummyTimetableData = () => {
@@ -32,14 +32,14 @@ const generateDummyTimetableData = () => {
   ];
 
   const courses = [
-    { code: 'CS101', name: 'Introduction to Computer Science', faculty: 'Dr. Alex Johnson', room: 'A101', semester: 'Spring 2025' },
-    { code: 'CS202', name: 'Data Structures and Algorithms', faculty: 'Dr. Sarah Miller', room: 'B201', semester: 'Spring 2025' },
-    { code: 'CS303', name: 'Database Systems', faculty: 'Prof. Robert Chen', room: 'A105', semester: 'Spring 2025' },
-    { code: 'CS405', name: 'Artificial Intelligence', faculty: 'Dr. Emily Zhang', room: 'C302', semester: 'Spring 2025' },
-    { code: 'CS301', name: 'Software Engineering', faculty: 'Prof. David Wilson', room: 'B204', semester: 'Fall 2024' },
-    { code: 'CS210', name: 'Computer Networks', faculty: 'Dr. Lisa Kumar', room: 'A102', semester: 'Fall 2024' },
-    { code: 'ME101', name: 'Engineering Mechanics', faculty: 'Dr. John Smith', room: 'D101', semester: 'Spring 2025' },
-    { code: 'EE201', name: 'Circuit Theory', faculty: 'Prof. Maria Garcia', room: 'E202', semester: 'Fall 2024' },
+    { code: 'CS101', name: 'Introduction to Computer Science', faculty: 'Dr. Alex Johnson', room: 'A101', semester: 'Semester 7' },
+    { code: 'CS202', name: 'Data Structures and Algorithms', faculty: 'Dr. Sarah Miller', room: 'B201', semester: 'Semester 7' },
+    { code: 'CS303', name: 'Database Systems', faculty: 'Prof. Robert Chen', room: 'A105', semester: 'Semester 7' },
+    { code: 'CS405', name: 'Artificial Intelligence', faculty: 'Dr. Emily Zhang', room: 'C302', semester: 'Semester 7' },
+    { code: 'CS301', name: 'Software Engineering', faculty: 'Prof. David Wilson', room: 'B204', semester: 'Semester 6' },
+    { code: 'CS210', name: 'Computer Networks', faculty: 'Dr. Lisa Kumar', room: 'A102', semester: 'Semester 6' },
+    { code: 'ME101', name: 'Engineering Mechanics', faculty: 'Dr. John Smith', room: 'D101', semester: 'Semester 7' },
+    { code: 'EE201', name: 'Circuit Theory', faculty: 'Prof. Maria Garcia', room: 'E202', semester: 'Semester 6' },
   ];
 
   // Faculty members
@@ -73,7 +73,7 @@ export default function TimetableViewer() {
   const [viewType, setViewType] = useState('default'); // 'default', 'faculty', 'semester', 'room'
   const [selectedFaculty, setSelectedFaculty] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [selectedSemester, setSelectedSemester] = useState('Spring 2025');
+  const [selectedSemester, setSelectedSemester] = useState('Semester 7');
   const [selectedDepartment, setSelectedDepartment] = useState('Computer Science');
   const [selectedDay, setSelectedDay] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');

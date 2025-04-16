@@ -402,8 +402,8 @@ export default function TimetableBuilder() {
                 onChange={(e) => setSelectedSemester(e.target.value)}
                 className="appearance-none pl-4 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
               >
-                <option value="Spring 2025">Spring 2025</option>
-                <option value="Fall 2024">Fall 2024</option>
+                <option value="Semester 7">Semester 7</option>
+                <option value="Semester 6">Semester 6</option>
               </select>
               <FiChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             </div>

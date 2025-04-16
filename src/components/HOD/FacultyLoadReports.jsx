@@ -8,23 +8,23 @@ import {
 
 // Mock data for faculty and courses
 // Using similar data structure as in FacultyAssignment.jsx
-const dummySemesters = ['Spring 2025', 'Fall 2024', 'Spring 2024', 'Fall 2023'];
+const dummySemesters = ['Semester 7', 'Semester 6', 'Semester 5', 'Semester 4'];
 
 const dummyCourses = [
-  { id: 1, code: 'CS101', title: 'Introduction to Computer Science', semester: 'Fall 2024', weeklyHours: '3L+1T', faculty: 1, tags: ['programming', 'introductory'] },
-  { id: 2, code: 'CS202', title: 'Data Structures and Algorithms', semester: 'Spring 2025', weeklyHours: '3L+2P', faculty: 1, tags: ['algorithms', 'data structures'] },
-  { id: 3, code: 'CS303', title: 'Database Systems', semester: 'Fall 2024', weeklyHours: '3L+1T+2P', faculty: 7, tags: ['databases', 'SQL'] },
-  { id: 4, code: 'CS405', title: 'Artificial Intelligence', semester: 'Spring 2025', weeklyHours: '4L+2P', faculty: 4, tags: ['AI', 'machine learning'] },
-  { id: 5, code: 'CS301', title: 'Software Engineering', semester: 'Fall 2024', weeklyHours: '3L+1T', faculty: 3, tags: ['software', 'project management'] },
-  { id: 6, code: 'CS210', title: 'Computer Networks', semester: 'Spring 2025', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['networking', 'protocols'] },
-  { id: 7, code: 'CS450', title: 'Cloud Computing', semester: 'Spring 2025', weeklyHours: '3L+2P', faculty: 7, tags: ['cloud', 'distributed systems'] },
-  { id: 8, code: 'CS320', title: 'Web Development', semester: 'Fall 2024', weeklyHours: '2L+3P', faculty: 6, tags: ['web', 'javascript', 'html'] },
-  { id: 9, code: 'CS410', title: 'Machine Learning', semester: 'Spring 2025', weeklyHours: '3L+2P', faculty: 4, tags: ['ML', 'statistics'] },
-  { id: 10, code: 'CS250', title: 'Computer Architecture', semester: 'Fall 2024', weeklyHours: '4L+1T', faculty: 2, tags: ['hardware', 'systems'] },
-  { id: 11, code: 'CS350', title: 'Operating Systems', semester: 'Spring 2025', weeklyHours: '3L+2P', faculty: 2, tags: ['OS', 'systems'] },
-  { id: 12, code: 'CS430', title: 'Cybersecurity', semester: 'Fall 2024', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['security', 'cryptography'] },
-  { id: 13, code: 'CS222', title: 'Advanced Programming', semester: 'Spring 2025', weeklyHours: '2L+3P', faculty: 6, tags: ['programming', 'advanced'] },
-  { id: 14, code: 'CS401', title: 'Project Management', semester: 'Fall 2024', weeklyHours: '2L+2T', faculty: 3, tags: ['project management', 'software'] },
+  { id: 1, code: 'CS101', title: 'Introduction to Computer Science', semester: 'Semester 6', weeklyHours: '3L+1T', faculty: 1, tags: ['programming', 'introductory'] },
+  { id: 2, code: 'CS202', title: 'Data Structures and Algorithms', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: 1, tags: ['algorithms', 'data structures'] },
+  { id: 3, code: 'CS303', title: 'Database Systems', semester: 'Semester 6', weeklyHours: '3L+1T+2P', faculty: 7, tags: ['databases', 'SQL'] },
+  { id: 4, code: 'CS405', title: 'Artificial Intelligence', semester: 'Semester 7', weeklyHours: '4L+2P', faculty: 4, tags: ['AI', 'machine learning'] },
+  { id: 5, code: 'CS301', title: 'Software Engineering', semester: 'Semester 6', weeklyHours: '3L+1T', faculty: 3, tags: ['software', 'project management'] },
+  { id: 6, code: 'CS210', title: 'Computer Networks', semester: 'Semester 7', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['networking', 'protocols'] },
+  { id: 7, code: 'CS450', title: 'Cloud Computing', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: 7, tags: ['cloud', 'distributed systems'] },
+  { id: 8, code: 'CS320', title: 'Web Development', semester: 'Semester 6', weeklyHours: '2L+3P', faculty: 6, tags: ['web', 'javascript', 'html'] },
+  { id: 9, code: 'CS410', title: 'Machine Learning', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: 4, tags: ['ML', 'statistics'] },
+  { id: 10, code: 'CS250', title: 'Computer Architecture', semester: 'Semester 6', weeklyHours: '4L+1T', faculty: 2, tags: ['hardware', 'systems'] },
+  { id: 11, code: 'CS350', title: 'Operating Systems', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: 2, tags: ['OS', 'systems'] },
+  { id: 12, code: 'CS430', title: 'Cybersecurity', semester: 'Semester 6', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['security', 'cryptography'] },
+  { id: 13, code: 'CS222', title: 'Advanced Programming', semester: 'Semester 7', weeklyHours: '2L+3P', faculty: 6, tags: ['programming', 'advanced'] },
+  { id: 14, code: 'CS401', title: 'Project Management', semester: 'Semester 6', weeklyHours: '2L+2T', faculty: 3, tags: ['project management', 'software'] },
 ];
 
 const dummyFaculty = [
@@ -125,7 +125,7 @@ const calculateHoursFromString = (hoursString) => {
 export default function FacultyLoadReports() {
   const [faculty, setFaculty] = useState([...dummyFaculty]);
   const [courses, setCourses] = useState([...dummyCourses]);
-  const [selectedSemester, setSelectedSemester] = useState('Spring 2025');
+  const [selectedSemester, setSelectedSemester] = useState('Semester 7');
   const [showOverloadedOnly, setShowOverloadedOnly] = useState(false);
   const [exportFormat, setExportFormat] = useState('PDF');
   const [expandedFaculty, setExpandedFaculty] = useState({});
