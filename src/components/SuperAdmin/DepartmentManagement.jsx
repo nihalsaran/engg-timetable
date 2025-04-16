@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
-import { FiBookOpen, FiUser, FiSearch, FiEdit, FiTrash2, FiBook } from 'react-icons/fi';
+import { FiBookOpen, FiUser, FiSearch, FiEdit, FiTrash2, FiBook, FiToggleRight } from 'react-icons/fi';
 import { 
   getAllDepartments, 
   getHODOptions, 
   searchDepartments, 
   createDepartment, 
   updateDepartment, 
-  deleteDepartment 
+  deleteDepartment,
+  departmentTypes 
 } from './services/DepartmentManagement';
 
 export default function DepartmentManagement() {
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ name: '', type: '', hod: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', type: '', hod: '', description: '', status: 'Active' });
   const [searchTerm, setSearchTerm] = useState('');
   const [departments, setDepartments] = useState([]);
   const [hodOptions, setHodOptions] = useState([]);
@@ -40,7 +41,7 @@ export default function DepartmentManagement() {
     e.preventDefault();
     const newDepartment = await createDepartment(formData);
     setDepartments([...departments, newDepartment]);
-    setFormData({ name: '', type: '', hod: '', description: '' });
+    setFormData({ name: '', type: '', hod: '', description: '', status: 'Active' });
     closeModal();
   };
 
@@ -176,14 +177,20 @@ export default function DepartmentManagement() {
               </div>
               <div className="relative flex items-center">
                 <FiBookOpen className="absolute left-4 text-gray-400" />
-                <input
+                <select
                   name="type"
                   value={formData.type}
                   onChange={handleChange}
                   required
-                  placeholder="Department Type"
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400 shadow-sm"
-                />
+                >
+                  <option value="">Select Department Type</option>
+                  {departmentTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block mb-1 font-medium">Assign HOD</label>
@@ -225,6 +232,18 @@ export default function DepartmentManagement() {
                   placeholder="Department description..."
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400 shadow-sm min-h-[100px]"
                 />
+              </div>
+              <div className="relative flex items-center">
+                <FiToggleRight className="absolute left-4 text-gray-400" />
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-400 shadow-sm"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
               </div>
               <div className="flex justify-end gap-4 mt-6">
                 <button

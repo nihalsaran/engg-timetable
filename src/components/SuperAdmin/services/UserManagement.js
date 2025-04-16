@@ -17,6 +17,11 @@ import {
   where,
   generateId
 } from '../../../firebase/config.js';
+import { databases, ID } from '../../../appwrite/config.js';
+
+// Appwrite database and collection IDs
+const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || 'default';
+const TEACHERS_COLLECTION = 'teachers';
 
 // Department data - would come from Database in production
 const departments = [
@@ -28,12 +33,11 @@ const departments = [
 ];
 
 // User roles
-const roles = ['superadmin', 'hod', 'tt_incharge', 'faculty'];
+const roles = ['superadmin', 'hod', 'tt_incharge'];
 const roleDisplayNames = {
   'superadmin': 'Admin',
   'hod': 'HOD',
-  'tt_incharge': 'TT Incharge',
-  'faculty': 'Faculty'
+  'tt_incharge': 'TT Incharge'
 };
 
 /**
@@ -118,6 +122,11 @@ export const createUser = async (userData) => {
       createdAt: new Date().toISOString()
     });
     
+    // If user is an HOD, also create entry in teachers collection in Appwrite
+    if (userData.role === 'hod') {
+      await createTeacherForHOD(userData, user.uid);
+    }
+    
     // Send password reset email so user can set their own password
     try {
       await sendPasswordResetEmail(auth, userData.email, {
@@ -162,6 +171,42 @@ export const updateUser = async (id, userData) => {
       active: userData.active !== false
     });
     
+    // If the user is an HOD, update or create their record in the teachers collection
+    if (userData.role === 'hod') {
+      try {
+        // Try to find if this user already has a teacher record in Appwrite
+        const teacherQuery = await databases.listDocuments(
+          DB_ID,
+          TEACHERS_COLLECTION,
+          [Query.equal('userId', id)]
+        );
+        
+        // If a record exists, update it
+        if (teacherQuery.documents && teacherQuery.documents.length > 0) {
+          const teacherId = teacherQuery.documents[0].$id;
+          
+          await databases.updateDocument(
+            DB_ID,
+            TEACHERS_COLLECTION,
+            teacherId,
+            {
+              name: userData.name,
+              email: userData.email,
+              department: userData.department,
+              active: userData.active !== false,
+              updatedAt: new Date().toISOString()
+            }
+          );
+        } else {
+          // If no record exists, create one
+          await createTeacherForHOD(userData, id);
+        }
+      } catch (appwriteError) {
+        console.error('Error updating HOD in teachers collection:', appwriteError);
+        // Continue with the user update even if the Appwrite operation fails
+      }
+    }
+    
     return {
       id,
       ...userData,
@@ -182,7 +227,36 @@ export const deleteUser = async (id) => {
   try {
     // Delete user profile from Firestore
     const userProfileRef = doc(db, 'profiles', id);
+    const userSnap = await getDoc(userProfileRef);
+    const userData = userSnap.data();
+    
     await deleteDoc(userProfileRef);
+    
+    // If the user was an HOD, also delete the corresponding teacher record in Appwrite
+    if (userData && userData.role === 'hod') {
+      try {
+        // Find the teacher record in Appwrite
+        const teacherQuery = await databases.listDocuments(
+          DB_ID,
+          TEACHERS_COLLECTION,
+          [Query.equal('userId', id)]
+        );
+        
+        // Delete the teacher record if found
+        if (teacherQuery.documents && teacherQuery.documents.length > 0) {
+          const teacherId = teacherQuery.documents[0].$id;
+          await databases.deleteDocument(
+            DB_ID,
+            TEACHERS_COLLECTION,
+            teacherId
+          );
+          console.log('HOD deleted from teachers collection:', teacherId);
+        }
+      } catch (appwriteError) {
+        console.error('Error deleting HOD from teachers collection:', appwriteError);
+        // Continue with the user deletion even if the Appwrite operation fails
+      }
+    }
     
     // In a real application, you would use Firebase Admin SDK
     // to delete the user from Firebase Authentication
@@ -301,9 +375,48 @@ export const getRoleBadgeColor = (role) => {
       return 'bg-blue-100 text-blue-800';
     case 'tt_incharge':
       return 'bg-green-100 text-green-800';
-    case 'faculty':
-      return 'bg-gray-100 text-gray-800';
     default:
       return 'bg-gray-100 text-gray-800';
+  }
+};
+
+/**
+ * Create a teacher record in Appwrite for HOD users
+ * @param {Object} userData User data to create teacher record
+ * @param {string} userId Firebase user ID
+ * @returns {Promise<Object>} Created teacher data
+ */
+const createTeacherForHOD = async (userData, userId) => {
+  try {
+    // Create teacher document in Appwrite
+    const teacherId = ID.unique();
+    const teacherData = {
+      userId: userId,
+      name: userData.name,
+      email: userData.email,
+      department: userData.department,
+      expertise: [], // Default empty expertise array
+      qualification: 'HOD', // Default qualification
+      experience: 0, // Default experience
+      active: userData.active !== false,
+      role: 'HOD', // Mark as HOD
+      maxHours: 20, // Default max teaching hours for HOD
+      status: 'available',
+      canBeHOD: true, // Flag to indicate this person can be HOD
+      createdAt: new Date().toISOString()
+    };
+    
+    const response = await databases.createDocument(
+      DB_ID,
+      TEACHERS_COLLECTION,
+      teacherId,
+      teacherData
+    );
+    
+    console.log('HOD added to teachers collection:', response.$id);
+    return response;
+  } catch (error) {
+    console.error('Error adding HOD to teachers collection:', error);
+    throw error;
   }
 };

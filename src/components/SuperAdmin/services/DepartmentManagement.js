@@ -71,10 +71,15 @@ export const getHODOptions = async () => {
       [Query.equal('canBeHOD', true)]
     );
     
-    return response.documents.map(teacher => ({
-      name: teacher.name,
-      avatar: teacher.avatar || 'https://via.placeholder.com/30'
-    }));
+    if (response.documents && response.documents.length > 0) {
+      return response.documents.map(teacher => ({
+        name: teacher.name,
+        avatar: teacher.avatar || 'https://via.placeholder.com/30'
+      }));
+    } else {
+      console.log("No HOD-eligible teachers found, using fallback data");
+      return hodOptions; // Use fallback if no teachers are found
+    }
   } catch (error) {
     console.error("Error fetching HOD options:", error);
     // Fallback to dummy data

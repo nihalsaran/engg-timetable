@@ -23,7 +23,7 @@ export default function UserManagement() {
   const [formData, setFormData] = useState({ 
     name: '', 
     email: '', 
-    role: 'faculty',
+    role: 'hod',
     department: '',
     active: true
   });
@@ -69,7 +69,7 @@ export default function UserManagement() {
       setFormData({ 
         name: '', 
         email: '', 
-        role: 'faculty',
+        role: 'hod',
         department: '',
         active: true
       });
@@ -168,7 +168,6 @@ export default function UserManagement() {
       case 'superadmin': return <FiShield className="mr-1" />;
       case 'hod': return <FiShield className="mr-1" />;
       case 'tt_incharge': return <FiUsers className="mr-1" />;
-      case 'faculty': return <FiUser className="mr-1" />;
       default: return null;
     }
   };
