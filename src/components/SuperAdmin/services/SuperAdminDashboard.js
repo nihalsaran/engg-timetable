@@ -34,19 +34,19 @@ export const fetchDashboardStats = async () => {
     const departmentsPromise = databases.listDocuments(
       DB_ID, 
       DEPARTMENTS_COLLECTION,
-      [Query.limit(0)]
+      [Query.limit(100)] // Changed from 0 to 100
     );
     
     const teachersPromise = databases.listDocuments(
       DB_ID, 
       TEACHERS_COLLECTION, 
-      [Query.limit(0)]
+      [Query.limit(100)] // Changed from 0 to 100
     );
     
     const roomsPromise = databases.listDocuments(
       DB_ID, 
       ROOMS_COLLECTION, 
-      [Query.limit(0)]
+      [Query.limit(100)] // Changed from 0 to 100
     );
     
     // Fetch settings for current academic info
@@ -73,7 +73,7 @@ export const fetchDashboardStats = async () => {
     const activeTeachersPromise = databases.listDocuments(
       DB_ID, 
       TEACHERS_COLLECTION, 
-      [Query.equal('active', true), Query.limit(0)]
+      [Query.equal('active', true), Query.limit(100)] // Changed from 0 to 100
     );
     
     const activeTeachers = await activeTeachersPromise;
