@@ -1,0 +1,53 @@
+// Backend/src/server.js
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+
+// Import routes
+const authRoutes = require('./routes/auth.routes');
+
+// Initialize Express
+const app = express();
+
+// Middleware
+app.use(helmet()); // Security headers
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Your frontend URL
+  credentials: true // Allow cookies
+})); 
+app.use(morgan('dev')); // Request logging
+app.use(express.json()); // Parse JSON request body
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(cookieParser()); // Parse cookies
+
+// Routes
+app.use('/api/auth', authRoutes);
+
+// Default route
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Engineering Timetable API Server',
+    status: 'Running'
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.statusCode || 500).json({
+    success: false,
+    message: err.message || 'Server Error',
+    error: process.env.NODE_ENV === 'development' ? err : {}
+  });
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+module.exports = app;

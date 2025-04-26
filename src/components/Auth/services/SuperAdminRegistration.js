@@ -1,94 +1,30 @@
-// SuperAdmin Registration Service - Uses Firebase backend
-import { 
-  auth, 
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from '../../../firebase/config.js';
-import { db, doc, setDoc, generateId } from '../../../firebase/config.js';
-
-// Database collection for SuperAdmin users
-const SUPERADMIN_COLLECTION = 'profiles';
+// SuperAdmin Registration Service - Uses backend API
+import * as authAPI from '../../../api/services/auth.api';
 
 // Registration code specifically for creating SuperAdmin accounts
 export const registerSuperAdmin = async (userData) => {
   try {
-    // Step 1: Create a new account in Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      userData.email,
-      userData.password
-    );
+    // Register SuperAdmin through the API
+    const response = await authAPI.registerSuperAdmin(userData);
     
-    const user = userCredential.user;
-    console.log('Account created successfully:', user.uid);
-    
-    // Step 2: Create a document in Firestore with user profile data
-    let documentId = null;
-    
-    try {
-      // Create document in Firestore
-      documentId = user.uid; // Use Firebase Auth UID as document ID
-      
-      await setDoc(doc(db, SUPERADMIN_COLLECTION, documentId), {
-        userId: user.uid,
-        name: userData.name,
-        email: userData.email,
-        role: 'superadmin',
-        department: userData.department,
-        createdAt: new Date().toISOString()
-      });
-      
-      console.log('SuperAdmin document created:', documentId);
-    } catch (docError) {
-      console.warn('Could not create document in Firestore, continuing with auth only:', docError);
-      // Continue with just the auth account, without the database document
-    }
-    
-    // Step 3: Create a session for the new user
-    let sessionCreated = false;
-    try {
-      // User is already logged in after createUserWithEmailAndPassword
-      // but we can ensure a fresh session by logging in again
-      await signInWithEmailAndPassword(auth, userData.email, userData.password);
-      sessionCreated = true;
-      console.log('Session created successfully');
-    } catch (sessionError) {
-      console.error('Could not create session:', sessionError);
-      // Continue without creating a session, user will need to log in manually
-    }
-    
+    // Return the user data from the response
     return {
-      id: user.uid,
-      documentId: documentId,
-      name: userData.name,
-      email: userData.email,
+      id: response.user.id,
+      name: response.user.name,
+      email: response.user.email,
       role: 'superadmin',
       created: true,
-      sessionCreated: sessionCreated // Include information about whether session was created
+      sessionCreated: !!response.token // Session created if we have a token
     };
   } catch (error) {
     console.error('SuperAdmin registration failed:', error);
-    
-    // Handle specific Firebase errors
-    switch (error.code) {
-      case 'auth/email-already-in-use':
-        throw new Error('An account with this email already exists');
-      case 'auth/invalid-email':
-        throw new Error('Invalid email address');
-      case 'auth/weak-password':
-        throw new Error('Password is too weak');
-      case 'auth/operation-not-allowed':
-        throw new Error('Account creation is disabled');
-      default:
-        throw new Error(`Registration failed: ${error.message}`);
-    }
+    throw error;
   }
 };
 
 // Validate registration secret key
-export const validateSecretKey = async (secretKey) => {
-  // Use the environment variable for the secret key
-  const VALID_SECRET_KEY = import.meta.env.VITE_SUPER_ADMIN_SECRET_KEY;
-  w
-  return secretKey === VALID_SECRET_KEY;
+export const validateSecretKey = (secretKey) => {
+  // The secret key will be validated by the backend during registration
+  // So we just return true here, and let the API handle the actual validation
+  return true;
 };
