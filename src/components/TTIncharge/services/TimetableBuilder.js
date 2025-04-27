@@ -255,3 +255,62 @@ export const getCompactCourseDisplay = (course, isCompact) => {
     room: `Room: ${course.room}`
   };
 };
+
+// Additional business logic functions moved from TimetableBuilder.jsx
+
+// Delete course from timetable
+export const deleteCourse = (timetableData, day, slot) => {
+  const newTimetable = JSON.parse(JSON.stringify(timetableData));
+  newTimetable[day][slot] = null;
+  return newTimetable;
+};
+
+// Update timetable on course drop
+export const updateTimetableOnDrop = (timetableData, day, slot, course, selectedRoom, dragSourceInfo) => {
+  const newTimetable = JSON.parse(JSON.stringify(timetableData));
+  
+  // If this is a re-drag from another cell, remove the course from its original position
+  if (dragSourceInfo) {
+    newTimetable[dragSourceInfo.day][dragSourceInfo.slot] = null;
+  }
+  
+  // Add the course to the timetable
+  newTimetable[day][slot] = {
+    ...course,
+    room: selectedRoom.id
+  };
+  
+  return newTimetable;
+};
+
+// Filter conflicts when a course is deleted
+export const filterConflictsAfterDeletion = (conflicts, day, slot) => {
+  return conflicts.filter(
+    conflict => !(conflict.day === day && conflict.slot === slot)
+  );
+};
+
+// Filter conflicts related to the source position when moving a course
+export const filterConflictsAfterMove = (conflicts, sourceDay, sourceSlot) => {
+  return conflicts.filter(
+    c => !(c.day === sourceDay && c.slot === sourceSlot)
+  );
+};
+
+// Create a tab object
+export const createTab = (id, name, isActive = true) => {
+  return { id, name, isActive };
+};
+
+// Update tabs state when switching tabs
+export const updateTabsOnSwitch = (tabs, targetTabId) => {
+  return tabs.map(tab => ({ 
+    ...tab, 
+    isActive: tab.id === targetTabId 
+  }));
+};
+
+// Create a deep copy of a timetable or any object
+export const deepCopy = (obj) => {
+  return JSON.parse(JSON.stringify(obj));
+};

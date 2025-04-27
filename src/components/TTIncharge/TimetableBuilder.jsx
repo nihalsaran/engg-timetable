@@ -13,7 +13,9 @@ import {
   initializeEmptyTimetable, checkConflicts, addCourseToTimetable,
   saveTimetable, publishTimetable, getCourseColorClass, filterCourses,
   getCompactTimeFormat, getAbbreviatedDay, getCellHeight, 
-  getResponsiveClasses, getCompactCourseDisplay
+  getResponsiveClasses, getCompactCourseDisplay, deleteCourse,
+  updateTimetableOnDrop, filterConflictsAfterDeletion, filterConflictsAfterMove,
+  createTab, updateTabsOnSwitch, deepCopy
 } from './services/TimetableBuilder';
 
 export default function TimetableBuilder() {
@@ -105,7 +107,7 @@ export default function TimetableBuilder() {
     // Add new tab
     setTabs(prevTabs => [
       ...prevTabs.map(tab => ({ ...tab, isActive: false })),
-      { id: newTabId, name: `New Timetable ${newTabId}`, isActive: true }
+      createTab(newTabId, `New Timetable ${newTabId}`)
     ]);
     
     // Set the new tab as active
@@ -124,12 +126,7 @@ export default function TimetableBuilder() {
 
   // Switch to a tab
   const switchTab = (tabId) => {
-    setTabs(prevTabs => 
-      prevTabs.map(tab => ({ 
-        ...tab, 
-        isActive: tab.id === tabId 
-      }))
-    );
+    setTabs(prevTabs => updateTabsOnSwitch(prevTabs, tabId));
     setActiveTabId(tabId);
   };
 
@@ -203,7 +200,7 @@ export default function TimetableBuilder() {
     
     // Remove any future states if we're not at the end of the history
     const newHistory = tabHistory.slice(0, tabHistoryIndex + 1);
-    newHistory.push(JSON.parse(JSON.stringify(data)));
+    newHistory.push(deepCopy(data));
     
     setHistoryData(prev => ({ ...prev, [tabId]: newHistory }));
     setHistoryIndices(prev => ({ ...prev, [tabId]: newHistory.length - 1 }));
@@ -216,7 +213,7 @@ export default function TimetableBuilder() {
       setHistoryIndices(prev => ({ ...prev, [activeTabId]: newIndex }));
       setTimetablesData(prev => ({ 
         ...prev, 
-        [activeTabId]: JSON.parse(JSON.stringify(history[newIndex]))
+        [activeTabId]: deepCopy(history[newIndex])
       }));
     }
   };
@@ -228,7 +225,7 @@ export default function TimetableBuilder() {
       setHistoryIndices(prev => ({ ...prev, [activeTabId]: newIndex }));
       setTimetablesData(prev => ({ 
         ...prev, 
-        [activeTabId]: JSON.parse(JSON.stringify(history[newIndex]))
+        [activeTabId]: deepCopy(history[newIndex])
       }));
     }
   };
@@ -249,15 +246,11 @@ export default function TimetableBuilder() {
   const handleDeleteCourse = (day, slot, e) => {
     e.stopPropagation(); // Prevent drag events from triggering
     
-    const newTimetable = JSON.parse(JSON.stringify(timetableData));
-    newTimetable[day][slot] = null;
-    
+    const newTimetable = deleteCourse(timetableData, day, slot);
     setTimetablesData(prev => ({ ...prev, [activeTabId]: newTimetable }));
     
     // Filter conflicts related to this cell if any
-    const newConflicts = conflicts.filter(
-      conflict => !(conflict.day === day && conflict.slot === slot)
-    );
+    const newConflicts = filterConflictsAfterDeletion(conflicts, day, slot);
     setConflictsData(prev => ({ ...prev, [activeTabId]: newConflicts }));
     
     // Add to history
@@ -267,33 +260,27 @@ export default function TimetableBuilder() {
   // Handle drop on a timetable cell
   const handleDrop = (day, slot) => {
     if (draggedCourse) {
-      const newTimetable = JSON.parse(JSON.stringify(timetableData));
+      // Update the timetable with the dropped course
+      const newTimetable = updateTimetableOnDrop(
+        timetableData, day, slot, draggedCourse, selectedRoom, dragSourceInfo
+      );
       
-      // If this is a re-drag from another cell, remove the course from its original position
+      // If this is a re-drag from another cell, update conflicts related to source
+      let updatedConflicts = conflicts;
       if (dragSourceInfo) {
-        newTimetable[dragSourceInfo.day][dragSourceInfo.slot] = null;
-        
-        // Remove any conflicts associated with the source position
-        const updatedConflicts = conflicts.filter(
-          c => !(c.day === dragSourceInfo.day && c.slot === dragSourceInfo.slot)
+        updatedConflicts = filterConflictsAfterMove(
+          conflicts, dragSourceInfo.day, dragSourceInfo.slot
         );
-        setConflictsData(prev => ({ ...prev, [activeTabId]: updatedConflicts }));
       }
       
       // Check for conflicts at the destination
       const newConflicts = checkConflicts(newTimetable, day, slot, draggedCourse, selectedRoom);
       setConflictsData(prev => ({ 
         ...prev, 
-        [activeTabId]: [...(prev[activeTabId] || []).filter(
+        [activeTabId]: [...updatedConflicts.filter(
           c => !(c.day === day && c.slot === slot)
         ), ...newConflicts]
       }));
-      
-      // Add the course to the timetable
-      newTimetable[day][slot] = {
-        ...draggedCourse,
-        room: selectedRoom.id
-      };
       
       // Update timetable data
       setTimetablesData(prev => ({ ...prev, [activeTabId]: newTimetable }));
