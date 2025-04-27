@@ -82,15 +82,15 @@ export const roomsData = [
   { id: 'D101', capacity: 80, type: 'Lecture Hall', facilities: ['Projector', 'Smart Board', 'Audio System'] },
 ];
 
-// Time slots
+// Time slots (reduced for better fit)
 export const timeSlots = [
-  '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
-  '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00',
-  '16:00 - 17:00', '17:00 - 18:00'
+  '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
+  '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', 
+  '15:00 - 16:00', '16:00 - 17:00'
 ];
 
-// Days of the week
-export const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// Days of the week (reduced for better fit)
+export const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 // Initialize empty timetable data
 export const initializeEmptyTimetable = () => {
@@ -206,4 +206,52 @@ export const filterCourses = (courses, { selectedSemester, selectedDepartment, s
     if (selectedFaculty && course.faculty.id !== selectedFaculty.id) return false;
     return true;
   });
+};
+
+// Get compact hour format for display
+export const getCompactTimeFormat = (timeSlot) => {
+  const parts = timeSlot.split(' - ');
+  if (parts.length !== 2) return timeSlot;
+  
+  const start = parts[0].substring(0, 5);
+  const end = parts[1].substring(0, 5);
+  return `${start}-${end}`;
+};
+
+// Get abbreviated day name
+export const getAbbreviatedDay = (day) => {
+  return day.substring(0, 3);
+};
+
+// Get compacted cell height based on view mode
+export const getCellHeight = (viewMode) => {
+  return viewMode === 'week' ? 'h-14' : 'h-20';
+};
+
+// Optimize display for smaller screens
+export const getResponsiveClasses = (isMobile) => {
+  return {
+    courseBlockWidth: isMobile ? 'w-40' : 'w-52',
+    roomSelectionWidth: isMobile ? 'w-44' : 'w-56',
+    gapSize: isMobile ? 'gap-1' : 'gap-3',
+    fontSize: isMobile ? 'text-xs' : 'text-sm',
+    padding: isMobile ? 'p-2' : 'p-4'
+  };
+};
+
+// Get compact display of course details based on available space
+export const getCompactCourseDisplay = (course, isCompact) => {
+  if (isCompact) {
+    return {
+      title: course.id,
+      subtitle: course.faculty.name.split(' ')[1], // Just the last name
+      room: course.room
+    };
+  }
+  
+  return {
+    title: `${course.id}: ${course.name}`,
+    subtitle: course.faculty.name,
+    room: `Room: ${course.room}`
+  };
 };
