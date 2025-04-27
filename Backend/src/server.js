@@ -12,6 +12,7 @@ const dashboardRoutes = require('./routes/superadmin-dashboard/dashboard.routes'
 const departmentRoutes = require('./routes/superadmin-dashboard/department.routes');
 const userRoutes = require('./routes/superadmin-dashboard/user.routes');
 const teacherRoutes = require('./routes/superadmin-dashboard/teacher.routes');
+const roomRoutes = require('./routes/superadmin-dashboard/room.routes');
 
 // Initialize Express
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/teachers', teacherRoutes);
+app.use('/api/rooms', roomRoutes);
 
 // Default route
 app.get('/', (req, res) => {
