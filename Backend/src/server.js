@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 // Import routes - updated to use new folder structure
 const authRoutes = require('./routes/auth/auth.routes');
 const dashboardRoutes = require('./routes/dashboard/dashboard.routes');
+const departmentRoutes = require('./routes/dashboard/department.routes');
 const userRoutes = require('./routes/user/user.routes');
 const teacherRoutes = require('./routes/faculty/teacher.routes');
 
@@ -29,6 +30,7 @@ app.use(cookieParser()); // Parse cookies
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/departments', departmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/teachers', teacherRoutes);
 

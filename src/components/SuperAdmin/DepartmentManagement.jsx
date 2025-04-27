@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiBookOpen, FiUser, FiSearch, FiEdit, FiTrash2, FiBook, FiToggleRight } from 'react-icons/fi';
+import { FiBookOpen, FiUser, FiSearch, FiEdit, FiTrash2, FiBook, FiToggleRight, FiAlertCircle } from 'react-icons/fi';
 import { 
   getAllDepartments, 
   getHODOptions, 
@@ -16,21 +16,37 @@ export default function DepartmentManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [departments, setDepartments] = useState([]);
   const [hodOptions, setHodOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     // Load initial data
     const fetchData = async () => {
-      const depts = await getAllDepartments();
-      setDepartments(depts);
-      
-      const hods = await getHODOptions();
-      setHodOptions(hods);
+      setLoading(true);
+      setError(null);
+      try {
+        const depts = await getAllDepartments();
+        setDepartments(depts);
+        
+        const hods = await getHODOptions();
+        setHodOptions(hods);
+      } catch (err) {
+        console.error("Failed to load initial data:", err);
+        setError("Failed to load departments. Please check your connection and try again.");
+      } finally {
+        setLoading(false);
+      }
     };
     
     fetchData();
   }, []);
 
-  const openModal = () => setShowModal(true);
+  const openModal = () => {
+    setActionError('');
+    setShowModal(true);
+  };
+  
   const closeModal = () => setShowModal(false);
 
   const handleChange = (e) => {
@@ -39,38 +55,85 @@ export default function DepartmentManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const newDepartment = await createDepartment(formData);
-    setDepartments([...departments, newDepartment]);
-    setFormData({ name: '', type: '', hod: '', description: '', status: 'Active' });
-    closeModal();
+    setActionError('');
+    
+    try {
+      const newDepartment = await createDepartment(formData);
+      setDepartments([...departments, newDepartment]);
+      setFormData({ name: '', type: '', hod: '', description: '', status: 'Active' });
+      closeModal();
+    } catch (err) {
+      setActionError(err.message || 'Failed to create department');
+    }
   };
 
   const handleSearch = async (e) => {
     const term = e.target.value;
     setSearchTerm(term);
-    const filtered = await searchDepartments(term);
-    setDepartments(filtered);
+    setLoading(true);
+    
+    try {
+      const filtered = await searchDepartments(term);
+      setDepartments(filtered);
+    } catch (err) {
+      console.error("Search failed:", err);
+      // Keep the current list if search fails
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = async (dept) => {
     // In a real app, you might open an edit modal here
     console.log('Edit department:', dept);
-    const updated = await updateDepartment(dept);
-    if (updated) {
-      setDepartments(departments.map(d => d.id === updated.id ? updated : d));
+    
+    try {
+      const updated = await updateDepartment(dept);
+      if (updated) {
+        setDepartments(departments.map(d => d.id === updated.id ? updated : d));
+      }
+    } catch (err) {
+      console.error("Failed to update department:", err);
+      // Show a toast notification here in a real app
     }
   };
 
   const handleDelete = async (id) => {
-    const result = await deleteDepartment(id);
-    if (result.success) {
-      setDepartments(departments.filter(dept => dept.id !== id));
+    try {
+      const result = await deleteDepartment(id);
+      if (result.success) {
+        setDepartments(departments.filter(dept => dept.id !== id));
+      } else {
+        throw new Error(result.error || 'Failed to delete department');
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+      // Show a toast notification here in a real app
     }
   };
+
+  if (loading && departments.length === 0) {
+    return (
+      <div className="p-6 relative">
+        <h1 className="text-2xl font-bold mb-6">Departments</h1>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 relative">
       <h1 className="text-2xl font-bold mb-6">Departments</h1>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+          <FiAlertCircle className="text-red-500" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Search and Filter Bar */}
       <div className="mb-6 flex flex-wrap items-center gap-4">
@@ -152,9 +215,17 @@ export default function DepartmentManagement() {
       </div>
       
       {/* Empty state when no departments match search */}
-      {departments.length === 0 && (
+      {departments.length === 0 && !loading && (
         <div className="text-center py-12 backdrop-blur-lg bg-white/20 rounded-xl">
           <p className="text-gray-500">No departments found matching your search.</p>
+          {error ? (
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition"
+            >
+              Refresh page
+            </button>
+          ) : null}
         </div>
       )}
 
@@ -163,6 +234,13 @@ export default function DepartmentManagement() {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm z-50">
           <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 w-11/12 max-w-md animate-fade-in-up border border-white/50">
             <h2 className="text-xl font-semibold mb-6">Add Department</h2>
+            
+            {actionError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-200 rounded-lg text-red-700 text-sm">
+                {actionError}
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative flex items-center">
                 <FiBookOpen className="absolute left-4 text-gray-400" />
