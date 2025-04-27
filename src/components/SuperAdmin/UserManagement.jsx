@@ -40,9 +40,12 @@ export default function UserManagement() {
         const usersData = await getUsers();
         setUsers(usersData);
         
-        // Get departments and roles
-        setDepartments(getDepartments());
-        setRoles(getRoles());
+        // Get departments and roles - make sure to await these
+        const departmentsData = await getDepartments();
+        setDepartments(departmentsData);
+        
+        const rolesData = await getRoles();
+        setRoles(rolesData);
       } catch (error) {
         console.error('Error loading users:', error);
         toast.error('Failed to load users');

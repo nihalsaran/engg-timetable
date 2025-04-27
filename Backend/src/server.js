@@ -9,6 +9,7 @@ const cookieParser = require('cookie-parser');
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const userRoutes = require('./routes/user.routes');
 
 // Initialize Express
 const app = express();
@@ -27,6 +28,7 @@ app.use(cookieParser()); // Parse cookies
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/users', userRoutes);
 
 // Default route
 app.get('/', (req, res) => {

@@ -1,137 +1,107 @@
 // src/api/services/dashboard.api.js
 import axios from 'axios';
+import { API_BASE_URL } from '../config.js';
 
-// Get API base URL from environment variables
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-
-// Create axios instance with base URL and auth header support
 const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true // For cookies if needed
+  baseURL: API_BASE_URL,
+  withCredentials: true
 });
 
-// Add auth token to requests if available
+// Add request interceptor to add authorization header
 api.interceptors.request.use(
-  config => {
+  (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  error => Promise.reject(error)
+  (error) => Promise.reject(error)
 );
 
 /**
- * Get all dashboard data in a single request
- * @returns {Promise<Object>} Dashboard data
- */
-export const getAllDashboardData = async () => {
-  try {
-    const response = await api.get('/dashboard/all');
-    return response.data.data;
-  } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-    throw error.response?.data?.message || 'Failed to fetch dashboard data';
-  }
-};
-
-/**
- * Get dashboard metrics
- * @returns {Promise<Object>} Dashboard metrics
+ * Get dashboard metrics for SuperAdmin
+ * @returns {Promise<Object>} Dashboard metrics data
  */
 export const getDashboardMetrics = async () => {
   try {
-    const response = await api.get('/dashboard/metrics');
-    return response.data.data;
+    const response = await api.get('/api/dashboard/metrics');
+    return response.data;
   } catch (error) {
     console.error('Error fetching dashboard metrics:', error);
-    throw error.response?.data?.message || 'Failed to fetch dashboard metrics';
+    throw error.response?.data || error;
   }
 };
 
 /**
  * Get recent activity
- * @param {number} limit - Number of activities to return
+ * @param {number} limit - Maximum number of activities to retrieve
  * @returns {Promise<Array>} Recent activities
  */
 export const getRecentActivity = async (limit = 5) => {
   try {
-    const response = await api.get(`/dashboard/activity?limit=${limit}`);
-    return response.data.data;
+    const response = await api.get(`/api/dashboard/activity?limit=${limit}`);
+    return response.data;
   } catch (error) {
     console.error('Error fetching recent activity:', error);
-    throw error.response?.data?.message || 'Failed to fetch recent activity';
+    throw error.response?.data || error;
   }
 };
 
 /**
- * Get semester progress
- * @returns {Promise<Array>} Semester progress data
+ * Get semester progress data
+ * @returns {Promise<Object>} Semester progress information
  */
 export const getSemesterProgress = async () => {
   try {
-    const response = await api.get('/dashboard/semester-progress');
-    return response.data.data;
+    const response = await api.get('/api/dashboard/semester-progress');
+    return response.data;
   } catch (error) {
     console.error('Error fetching semester progress:', error);
-    throw error.response?.data?.message || 'Failed to fetch semester progress';
+    throw error.response?.data || error;
   }
 };
 
 /**
- * Get department distribution
+ * Get department distribution data
  * @returns {Promise<Array>} Department distribution data
  */
 export const getDepartmentDistribution = async () => {
   try {
-    const response = await api.get('/dashboard/department-distribution');
-    return response.data.data;
+    const response = await api.get('/api/dashboard/department-distribution');
+    return response.data;
   } catch (error) {
     console.error('Error fetching department distribution:', error);
-    throw error.response?.data?.message || 'Failed to fetch department distribution';
+    throw error.response?.data || error;
   }
 };
 
 /**
- * Get room utilization
+ * Get room utilization data
  * @returns {Promise<Array>} Room utilization data
  */
 export const getRoomUtilization = async () => {
   try {
-    const response = await api.get('/dashboard/room-utilization');
-    return response.data.data;
+    const response = await api.get('/api/dashboard/room-utilization');
+    return response.data;
   } catch (error) {
     console.error('Error fetching room utilization:', error);
-    throw error.response?.data?.message || 'Failed to fetch room utilization';
+    throw error.response?.data || error;
   }
 };
 
 /**
- * Log a new activity
- * @param {string} action - Type of action
+ * Log an activity
+ * @param {string} action - Action type
  * @param {string} details - Activity details
  * @returns {Promise<Object>} Created activity
  */
 export const logActivity = async (action, details) => {
   try {
-    const response = await api.post('/dashboard/activity', { action, details });
-    return response.data.data;
+    const response = await api.post('/api/dashboard/log-activity', { action, details });
+    return response.data;
   } catch (error) {
     console.error('Error logging activity:', error);
-    throw error.response?.data?.message || 'Failed to log activity';
+    throw error.response?.data || error;
   }
 };
-
-// Export all functions
-const dashboardAPI = {
-  getAllDashboardData,
-  getDashboardMetrics,
-  getRecentActivity,
-  getSemesterProgress,
-  getDepartmentDistribution,
-  getRoomUtilization,
-  logActivity
-};
-
-export default dashboardAPI;

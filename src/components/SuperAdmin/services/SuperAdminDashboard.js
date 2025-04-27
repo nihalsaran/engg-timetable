@@ -1,5 +1,5 @@
 // SuperAdminDashboard.js - Updated to integrate with Appwrite
-import dashboardAPI from '../../../api/services/dashboard.api';
+import * as dashboardAPI from '../../../api/services/dashboard.api';
 
 /**
  * Get dashboard metrics for SuperAdmin dashboard
