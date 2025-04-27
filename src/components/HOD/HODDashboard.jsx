@@ -16,6 +16,12 @@ export default function HODDashboard() {
     handleSidebarNavigation(navigate, path, label, setActiveSidebarItem);
   };
 
+  // Render sidebar items with icon components (not JSX elements)
+  const renderSidebarIcon = (item) => {
+    const IconComponent = item.icon;
+    return <IconComponent size={item.iconSize} />;
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <div className="flex-1 flex flex-col">

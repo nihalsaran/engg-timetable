@@ -6,11 +6,11 @@ import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar } from 'react-icons/fi'
  */
 export const getSidebarItems = () => {
   return [
-    { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/hod-dashboard' },
-    { label: 'Courses', icon: <FiBook size={18} />, path: '/courses' },
-    { label: 'Faculty', icon: <FiUsers size={18} />, path: '/faculty' },
-    { label: 'Reports', icon: <FiFileText size={18} />, path: '/reports' },
-    { label: 'Timetable', icon: <FiCalendar size={18} />, path: '/timetable' },
+    { label: 'Dashboard', icon: FiGrid, iconSize: 18, path: '/hod-dashboard' },
+    { label: 'Courses', icon: FiBook, iconSize: 18, path: '/courses' },
+    { label: 'Faculty', icon: FiUsers, iconSize: 18, path: '/faculty' },
+    { label: 'Reports', icon: FiFileText, iconSize: 18, path: '/reports' },
+    { label: 'Timetable', icon: FiCalendar, iconSize: 18, path: '/timetable' },
   ];
 };
 

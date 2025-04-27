@@ -1,7 +1,7 @@
 // filepath: /Users/nihalsarandasduggirala/Downloads/engg-timetable/src/components/HODLayout.jsx
 import React, { useContext } from 'react';
 import { Outlet } from 'react-router-dom';
-import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar, FiBell, FiSearch, FiChevronDown, FiChevronUp, FiLogOut } from 'react-icons/fi';
+import { FiBell, FiSearch, FiChevronDown, FiChevronUp, FiLogOut } from 'react-icons/fi';
 import { AuthContext } from '../../App';
 import { useHODLayout } from './services/HODLayout';
 
@@ -21,13 +21,10 @@ export default function HODLayout() {
     selectSemester
   } = useHODLayout(user, setUser);
 
-  // Map of icon components for the sidebar
-  const iconComponents = {
-    FiGrid: <FiGrid size={18} />,
-    FiBook: <FiBook size={18} />,
-    FiUsers: <FiUsers size={18} />,
-    FiFileText: <FiFileText size={18} />,
-    FiCalendar: <FiCalendar size={18} />
+  // Render sidebar icon component
+  const renderIcon = (item) => {
+    const IconComponent = item.icon;
+    return <IconComponent size={item.iconSize} />;
   };
 
   return (
@@ -48,7 +45,7 @@ export default function HODLayout() {
                   ? 'bg-white/10 font-semibold' 
                   : 'hover:bg-white/5'}`}
             >
-              <div>{iconComponents[item.icon]}</div>
+              <div>{renderIcon(item)}</div>
               <span className="hidden lg:block">{item.label}</span>
             </button>
           ))}

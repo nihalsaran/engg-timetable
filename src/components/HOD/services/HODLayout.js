@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { logoutUser } from '../../Auth/services/Login';
+import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar } from 'react-icons/fi';
 
 export const useHODLayout = (user, setUser) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
@@ -65,11 +66,11 @@ export const useHODLayout = (user, setUser) => {
   }, [location]);
   
   const sidebarItems = [
-    { label: 'Dashboard', icon: 'FiGrid', path: '/hod/dashboard' },
-    { label: 'Courses', icon: 'FiBook', path: '/hod/courses' },
-    { label: 'Assign-Course', icon: 'FiUsers', path: '/hod/assign-faculty' },
-    { label: 'Reports', icon: 'FiFileText', path: '/hod/reports' },
-    { label: 'Timetable', icon: 'FiCalendar', path: '/hod/timetable' },
+    { label: 'Dashboard', icon: FiGrid, iconSize: 18, path: '/hod/dashboard' },
+    { label: 'Courses', icon: FiBook, iconSize: 18, path: '/hod/courses' },
+    { label: 'Assign-Course', icon: FiUsers, iconSize: 18, path: '/hod/assign-faculty' },
+    { label: 'Reports', icon: FiFileText, iconSize: 18, path: '/hod/reports' },
+    { label: 'Timetable', icon: FiCalendar, iconSize: 18, path: '/hod/timetable' },
   ];
 
   const handleNavigation = (path, label) => {
