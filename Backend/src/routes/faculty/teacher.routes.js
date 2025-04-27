@@ -1,7 +1,7 @@
 // Backend/src/routes/teacher.routes.js
 const express = require('express');
 const { body } = require('express-validator');
-const teacherController = require('../../controllers/dashboard/teacher.controller');
+const teacherController = require('../../controllers/superadmin-dashboard/teacher.controller');
 const { verifyToken, isSuperAdmin, isHOD } = require('../../middleware/auth.middleware');
 
 const router = express.Router();

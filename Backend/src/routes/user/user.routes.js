@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { check } = require('express-validator');
-const userController = require('../../controllers/dashboard/user.controller');
+const userController = require('../../controllers/superadmin-dashboard/user.controller');
 const authMiddleware = require('../../middleware/auth.middleware');
 
 // All routes require authentication and superadmin privileges

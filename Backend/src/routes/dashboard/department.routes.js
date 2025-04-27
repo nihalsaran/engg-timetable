@@ -1,7 +1,7 @@
 // Backend/src/routes/dashboard/department.routes.js
 const express = require('express');
 const { body } = require('express-validator');
-const departmentController = require('../../controllers/dashboard/department.controller');
+const departmentController = require('../../controllers/superadmin-dashboard/department.controller');
 const { verifyToken, isSuperAdmin, isHOD } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
