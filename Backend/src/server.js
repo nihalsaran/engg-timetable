@@ -8,10 +8,10 @@ const cookieParser = require('cookie-parser');
 
 // Import routes - updated to use new folder structure
 const authRoutes = require('./routes/auth/auth.routes');
-const dashboardRoutes = require('./routes/dashboard/dashboard.routes');
-const departmentRoutes = require('./routes/dashboard/department.routes');
-const userRoutes = require('./routes/dashboard/user.routes');
-const teacherRoutes = require('./routes/dashboard/teacher.routes');
+const dashboardRoutes = require('./routes/superadmin-dashboard/dashboard.routes');
+const departmentRoutes = require('./routes/superadmin-dashboard/department.routes');
+const userRoutes = require('./routes/superadmin-dashboard/user.routes');
+const teacherRoutes = require('./routes/superadmin-dashboard/teacher.routes');
 
 // Initialize Express
 const app = express();
