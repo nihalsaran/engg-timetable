@@ -22,11 +22,37 @@ export default function TeacherManagement() {
   const [showInfoTooltip, setShowInfoTooltip] = useState(false);
   const fileInputRef = useRef(null);
   const tooltipRef = useRef(null);
+  const [subjectAreas, setSubjectAreas] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   // Function to fetch all teachers on component mount
   useEffect(() => {
     fetchTeachers();
+    fetchSubjectAreas();
+    fetchDepartments();
   }, []);
+
+  // Fetch subject areas from the backend
+  const fetchSubjectAreas = async () => {
+    try {
+      const areas = await TeacherManagementService.getSubjectAreas();
+      setSubjectAreas(areas);
+    } catch (error) {
+      console.error('Failed to load subject areas:', error);
+      setSubjectAreas([]);
+    }
+  };
+
+  // Fetch departments from the backend
+  const fetchDepartments = async () => {
+    try {
+      const depts = await TeacherManagementService.getDepartments();
+      setDepartments(depts);
+    } catch (error) {
+      console.error('Failed to load departments:', error);
+      setDepartments([]);
+    }
+  };
 
   // Handle clicks outside tooltip
   useEffect(() => {
@@ -240,18 +266,23 @@ export default function TeacherManagement() {
   };
 
   // Download example JSON dataset
-  const downloadExampleJSON = () => {
-    const exampleData = TeacherManagementService.getExampleJSONDataset();
-    
-    const blob = new Blob([JSON.stringify(exampleData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'faculty_dataset_example.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const downloadExampleJSON = async () => {
+    try {
+      const exampleData = await TeacherManagementService.getExampleJSONDataset();
+      
+      const blob = new Blob([JSON.stringify(exampleData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'faculty_dataset_example.json';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download example dataset:', error);
+      setError('Failed to download example dataset');
+    }
   };
 
   return (
@@ -497,7 +528,7 @@ export default function TeacherManagement() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-indigo-400 focus:outline-none appearance-none pt-6"
                     >
                       <option value="" disabled>Select Department</option>
-                      {TeacherManagementService.departments.map((dept) => (
+                      {departments.map((dept) => (
                         <option key={dept} value={dept}>{dept}</option>
                       ))}
                     </select>
@@ -562,7 +593,7 @@ export default function TeacherManagement() {
                     Areas of Expertise (Select all that apply)
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {TeacherManagementService.subjectAreas.map((subject) => (
+                    {subjectAreas.map((subject) => (
                       <button
                         key={subject}
                         type="button"
