@@ -4,3 +4,4 @@ Also note across the whole app, I am using Firebase only for auth and UserManage
 Also note to produce production level code.
 
 
+Seperate the Buisness logic to the service file from the JSX file.
