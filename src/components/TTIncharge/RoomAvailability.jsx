@@ -15,7 +15,17 @@ import {
   FiChevronDown,
   FiX
 } from 'react-icons/fi';
-import { roomsData, weekDays, timeSlots, coursesData } from './services/TimetableBuilder';
+import { weekDays, timeSlots } from './services/TimetableBuilder';
+import {
+  departments,
+  roomTypes,
+  generateRoomAvailabilityData,
+  filterRooms,
+  getVisibleTimeSlots,
+  getVisibleDays,
+  getStatusColorClass,
+  getStatusText
+} from './services/RoomAvailability';
 
 export default function RoomAvailability() {
   // States for filters
@@ -31,70 +41,18 @@ export default function RoomAvailability() {
 
   // Enhanced room data with availability status
   const [enhancedRoomsData, setEnhancedRoomsData] = useState([]);
-
-  // Department list derived from rooms
-  const departments = ['Computer Science', 'Electrical Engineering', 'Mechanical Engineering', 'Civil Engineering'];
   
-  // Room types
-  const roomTypes = ['Lecture Hall', 'Classroom', 'Computer Lab', 'Conference Room', 'Seminar Hall'];
-  
-  // Filtered rooms
-  const filteredRooms = enhancedRoomsData.filter(room => {
-    if (selectedDepartment && !room.departments.includes(selectedDepartment)) return false;
-    if (selectedRoomType && room.type !== selectedRoomType) return false;
-    return true;
-  });
+  // Filtered rooms using the service function
+  const filteredRooms = filterRooms(enhancedRoomsData, selectedDepartment, selectedRoomType);
 
   // Initialize room data with availability
   useEffect(() => {
-    generateRoomAvailabilityData();
+    updateRoomAvailabilityData();
   }, []);
 
-  // Function to generate room availability data
-  const generateRoomAvailabilityData = () => {
-    // Start with base room data and add availability
-    const roomsWithAvailability = roomsData.map(room => {
-      // Generate mock availability data for each room
-      const availability = {};
-      weekDays.forEach(day => {
-        availability[day] = {};
-        timeSlots.forEach(slot => {
-          // Random status: 0 = free, 1 = occupied, 2 = tentative
-          const randStatus = Math.random();
-          const status = randStatus > 0.7 ? 0 : randStatus > 0.2 ? 1 : 2;
-          
-          let course = null;
-          if (status === 1 || status === 2) {
-            // Assign a random course if slot is occupied or tentative
-            const randomCourse = coursesData[Math.floor(Math.random() * coursesData.length)];
-            course = {
-              id: randomCourse.id,
-              name: randomCourse.name,
-              faculty: randomCourse.faculty
-            };
-          }
-          
-          availability[day][slot] = {
-            status,
-            course
-          };
-        });
-      });
-      
-      // Add random department allocations for filtering
-      const departments = [];
-      if (Math.random() > 0.5) departments.push('Computer Science');
-      if (Math.random() > 0.6) departments.push('Electrical Engineering');
-      if (Math.random() > 0.7) departments.push('Mechanical Engineering');
-      if (Math.random() > 0.8) departments.push('Civil Engineering');
-      
-      return {
-        ...room,
-        availability,
-        departments: departments.length ? departments : ['General']
-      };
-    });
-    
+  // Function to update room availability data
+  const updateRoomAvailabilityData = () => {
+    const roomsWithAvailability = generateRoomAvailabilityData();
     setEnhancedRoomsData(roomsWithAvailability);
     setSelectedRoom(roomsWithAvailability[0]);
   };
@@ -103,7 +61,7 @@ export default function RoomAvailability() {
   const handleRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      generateRoomAvailabilityData();
+      updateRoomAvailabilityData();
       setIsRefreshing(false);
     }, 1000);
   };
@@ -113,43 +71,11 @@ export default function RoomAvailability() {
     window.print();
   };
 
-  // Function to get status color class
-  const getStatusColorClass = (status) => {
-    switch(status) {
-      case 0:
-        return 'bg-green-100 border-green-300 hover:bg-green-200';
-      case 1:
-        return 'bg-red-100 border-red-300 hover:bg-red-200';
-      case 2:
-        return 'bg-yellow-100 border-yellow-300 hover:bg-yellow-200';
-      default:
-        return 'bg-gray-100';
-    }
-  };
-
-  // Function to get status text
-  const getStatusText = (status) => {
-    switch(status) {
-      case 0:
-        return 'Available';
-      case 1:
-        return 'Occupied';
-      case 2:
-        return 'Tentative';
-      default:
-        return 'Unknown';
-    }
-  };
-
   // Get visible time slots based on time range filter
-  const visibleTimeSlots = timeSlots.filter(slot => {
-    const slotStart = slot.split(' - ')[0];
-    const slotEnd = slot.split(' - ')[1];
-    return slotStart >= timeRange.start && slotEnd <= timeRange.end;
-  });
+  const visibleTimeSlots = getVisibleTimeSlots(timeSlots, timeRange);
 
   // Get visible days based on view mode
-  const visibleDays = viewMode === 'week' ? weekDays : [selectedDay];
+  const visibleDays = getVisibleDays(weekDays, viewMode, selectedDay);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto print:max-w-full">
