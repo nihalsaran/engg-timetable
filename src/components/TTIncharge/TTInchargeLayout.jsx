@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import React, { useContext } from 'react';
+import { Outlet } from 'react-router-dom';
 import { 
   FiGrid, 
   FiCalendar, 
@@ -15,104 +15,43 @@ import {
   FiMenu,
   FiLogOut
 } from 'react-icons/fi';
-import { logoutUser } from '../Auth/services/Login';
 import { AuthContext } from '../../App';
+import { useTTInchargeLayout } from './services/TTInchargeLayout';
 
 export default function TTInchargeLayout() {
-  const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
-  const [semesterDropdownOpen, setSemesterDropdownOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [selectedSemester, setSelectedSemester] = useState('Semester 7');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
   const { user, setUser } = useContext(AuthContext);
   
-  // List of available semesters
-  const availableSemesters = [
-    'Semester 7',
-    'Semester 6',
-    'Semester 5',
-    'Semester 4'
-  ];
-  
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const closeDropdowns = (e) => {
-      if (!e.target.closest('.semester-dropdown')) {
-        setSemesterDropdownOpen(false);
-      }
-      if (!e.target.closest('.profile-dropdown')) {
-        setProfileDropdownOpen(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', closeDropdowns);
-    return () => document.removeEventListener('mousedown', closeDropdowns);
-  }, []);
-  
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-      // Update auth context
-      setUser(null);
-      // Redirect to login page after successful logout
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Show error message to user
-      alert('Logout failed. Please try again.');
+  const {
+    activeSidebarItem,
+    semesterDropdownOpen,
+    setSemesterDropdownOpen,
+    profileDropdownOpen,
+    setProfileDropdownOpen,
+    selectedSemester,
+    setSelectedSemester,
+    sidebarCollapsed,
+    availableSemesters,
+    handleLogout,
+    toggleSidebar,
+    sidebarItems,
+    handleNavigation,
+    getLayoutClasses
+  } = useTTInchargeLayout(setUser);
+
+  // Get layout classes
+  const { sidebarWidthClass, mainMarginClass, headerLeftClass } = getLayoutClasses();
+
+  // Map icon strings to actual icon components
+  const getIconComponent = (iconName, size = 18) => {
+    switch(iconName) {
+      case 'FiGrid': return <FiGrid size={size} />;
+      case 'FiCalendar': return <FiCalendar size={size} />;
+      case 'FiAlertCircle': return <FiAlertCircle size={size} />;
+      case 'FiHome': return <FiHome size={size} />;
+      case 'FiUsers': return <FiUsers size={size} />;
+      default: return <FiGrid size={size} />;
     }
   };
-  
-  // Set active item based on current path
-  useEffect(() => {
-    const path = location.pathname;
-    if (path.includes('/tt/dashboard')) {
-      setActiveSidebarItem('Dashboard');
-    } else if (path.includes('/tt/timetable-builder')) {
-      setActiveSidebarItem('Timetable Builder');
-    } else if (path.includes('/tt/conflicts')) {
-      setActiveSidebarItem('Conflicts');
-    } else if (path.includes('/tt/rooms') || path.includes('/tt/room-availability')) {
-      setActiveSidebarItem('Rooms');
-    } else if (path.includes('/tt/faculty-timetable')) {
-      setActiveSidebarItem('Faculty View');
-    }
-  }, [location]);
-  
-  const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
-  
-  const sidebarItems = [
-    { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/tt/dashboard' },
-    { label: 'Timetable Builder', icon: <FiCalendar size={18} />, path: '/tt/timetable-builder' },
-    { label: 'Conflicts', icon: <FiAlertCircle size={18} />, path: '/tt/conflicts' },
-    { label: 'Rooms', icon: <FiHome size={18} />, path: '/tt/rooms' },
-    { label: 'Faculty View', icon: <FiUsers size={18} />, path: '/tt/faculty-timetable' },
-  ];
-
-  const handleNavigation = (path, label) => {
-    setActiveSidebarItem(label);
-    navigate(path);
-  };
-
-  // Determine sidebar width class based on collapsed state and screen size
-  const sidebarWidthClass = sidebarCollapsed 
-    ? "w-16" 
-    : "w-20 lg:w-64";
-  
-  // Determine main content margin based on collapsed state and screen size
-  const mainMarginClass = sidebarCollapsed 
-    ? "ml-16" 
-    : "ml-20 lg:ml-64";
-
-  // Determine header left position based on collapsed state and screen size
-  const headerLeftClass = sidebarCollapsed 
-    ? "left-16" 
-    : "left-20 lg:left-64";
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -144,7 +83,7 @@ export default function TTInchargeLayout() {
                   : 'hover:bg-white/5'}`}
               title={item.label}
             >
-              <div>{item.icon}</div>
+              <div>{getIconComponent(item.icon)}</div>
               {!sidebarCollapsed && <span className="hidden lg:block">{item.label}</span>}
             </button>
           ))}
