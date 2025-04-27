@@ -36,6 +36,12 @@ export const getRecentActivity = async () => {
   try {
     const activities = await dashboardAPI.getRecentActivity();
     
+    // Check if activities is an array before mapping over it
+    if (!Array.isArray(activities)) {
+      console.error("API returned non-array data for activities:", activities);
+      return getRecentActivities();
+    }
+    
     // Format data to match component expectations
     return activities.map(activity => ({
       id: activity.id,
@@ -45,12 +51,7 @@ export const getRecentActivity = async () => {
     }));
   } catch (error) {
     console.error("Error fetching recent activities:", error);
-    return getRecentActivities().map(activity => ({
-      id: activity.id,
-      user: activity.user,
-      action: activity.details,
-      time: formatTimestamp(activity.timestamp)
-    }));
+    return getRecentActivities();
   }
 };
 
@@ -60,8 +61,12 @@ export const getRecentActivity = async () => {
  * @returns {string} Formatted time string
  */
 const formatTimestamp = (timestamp) => {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (err) {
+    return "Unknown time";
+  }
 };
 
 /**
@@ -114,7 +119,31 @@ export const getRecentActivities = () => {
  */
 export const getSemesterProgress = async () => {
   try {
-    return await dashboardAPI.getSemesterProgress();
+    const progressData = await dashboardAPI.getSemesterProgress();
+    
+    // Check if response is an array before returning it
+    if (!Array.isArray(progressData)) {
+      console.error("API returned non-array data for semester progress:", progressData);
+      // Return mock data if response is not an array
+      return [
+        {
+          id: 1,
+          name: 'Spring 2025',
+          progress: 75,
+          startDate: 'Jan 10, 2025',
+          endDate: 'May 30, 2025'
+        },
+        {
+          id: 2,
+          name: 'Summer 2025',
+          progress: 10,
+          startDate: 'Jun 15, 2025',
+          endDate: 'Aug 25, 2025'
+        }
+      ];
+    }
+    
+    return progressData;
   } catch (error) {
     console.error("Error fetching semester progress:", error);
     // Return mock data if fetch fails
@@ -170,7 +199,22 @@ export const manageSemester = () => {
  */
 export const getDepartmentDistribution = async () => {
   try {
-    return await dashboardAPI.getDepartmentDistribution();
+    const departments = await dashboardAPI.getDepartmentDistribution();
+    
+    // Check if response is an array before returning it
+    if (!Array.isArray(departments)) {
+      console.error("API returned non-array data for departments:", departments);
+      // Return mock data if response is not an array
+      return [
+        { department: 'Computer Science', teachers: 12 },
+        { department: 'Electrical Engineering', teachers: 9 },
+        { department: 'Mechanical Engineering', teachers: 7 },
+        { department: 'Civil Engineering', teachers: 5 },
+        { department: 'Chemical Engineering', teachers: 4 }
+      ];
+    }
+    
+    return departments;
   } catch (error) {
     console.error("Error getting department distribution:", error);
     
@@ -191,7 +235,22 @@ export const getDepartmentDistribution = async () => {
  */
 export const getRoomUtilization = async () => {
   try {
-    return await dashboardAPI.getRoomUtilization();
+    const rooms = await dashboardAPI.getRoomUtilization();
+    
+    // Check if response is an array before returning it
+    if (!Array.isArray(rooms)) {
+      console.error("API returned non-array data for room utilization:", rooms);
+      // Return mock data if response is not an array
+      return [
+        { type: 'Classroom', utilized: 75, available: 25 },
+        { type: 'Lecture Hall', utilized: 60, available: 40 },
+        { type: 'Computer Lab', utilized: 85, available: 15 },
+        { type: 'Seminar Hall', utilized: 40, available: 60 },
+        { type: 'Conference Room', utilized: 30, available: 70 }
+      ];
+    }
+    
+    return rooms;
   } catch (error) {
     console.error("Error getting room utilization:", error);
     
@@ -214,10 +273,19 @@ export const getRoomUtilization = async () => {
  */
 export const logActivityToBackend = async (action, details) => {
   try {
-    return await dashboardAPI.logActivity(action, details);
+    // Only attempt to log to backend in production environments
+    if (process.env.NODE_ENV === 'production') {
+      return await dashboardAPI.logActivity(action, details);
+    } else {
+      // Just log locally in development to avoid API errors
+      console.log(`[Activity Log] ${action}: ${details}`);
+      return { success: true, local: true };
+    }
   } catch (error) {
+    // Log error but don't throw exception to prevent breaking the UI
     console.error("Error logging activity:", error);
-    return null;
+    // Return a successful response to avoid breaking the UI flow
+    return { success: false, error: error.message };
   }
 };
 

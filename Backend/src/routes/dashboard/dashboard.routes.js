@@ -17,7 +17,8 @@ router.get('/semester-progress', dashboardController.getSemesterProgress);
 router.get('/department-distribution', dashboardController.getDepartmentDistribution);
 router.get('/room-utilization', dashboardController.getRoomUtilization);
 
-// Log new activity
+// Log new activity (support both endpoint patterns)
 router.post('/activity', dashboardController.logActivity);
+router.post('/log-activity', dashboardController.logActivity); // Add alternate endpoint to match frontend expectations
 
 module.exports = router;

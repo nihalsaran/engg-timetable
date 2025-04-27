@@ -33,7 +33,7 @@ export default function SuperAdminDashboard() {
         // Initially set metrics from sync function to show something right away
         setMetrics(SuperAdminDashboardService.getDashboardMetrics());
         
-        // Log page view for analytics
+        // Log page view for analytics - no need to await or handle errors for logging
         SuperAdminDashboardService.logActivityToBackend(
           'PageView', 
           'SuperAdmin viewed the dashboard'
@@ -41,9 +41,9 @@ export default function SuperAdminDashboard() {
         
         try {
           // Attempt to fetch all data in a single request for better performance
-          const allData = await SuperAdminDashboardService.fetchDashboardStats();
+          const allData = await SuperAdminDashboardService.fetchDashboardStats().catch(() => ({}));
           
-          // Update state with the actual metrics
+          // Update state with the actual metrics, fallback to 0 if any value is missing
           setMetrics({
             totalUsers: allData.totalUsers || 0,
             totalDepartments: allData.totalDepartments || 0,
@@ -51,18 +51,30 @@ export default function SuperAdminDashboard() {
             conflictsToday: allData.conflictsToday || 0
           });
           
-          // Fetch other data separately in parallel
-          const [activities, progress, departments, rooms] = await Promise.all([
+          // Use Promise.allSettled instead of Promise.all to prevent one failure from failing all
+          const results = await Promise.allSettled([
             SuperAdminDashboardService.getRecentActivity(),
             SuperAdminDashboardService.getSemesterProgress(),
             SuperAdminDashboardService.getDepartmentDistribution(),
             SuperAdminDashboardService.getRoomUtilization()
           ]);
           
-          setRecentActivity(activities);
-          setSemesterProgress(progress);
-          setDepartmentData(departments);
-          setRoomUtilization(rooms);
+          // Handle each result individually so we can use data from successful promises
+          if (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) {
+            setRecentActivity(results[0].value);
+          }
+          
+          if (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) {
+            setSemesterProgress(results[1].value);
+          }
+          
+          if (results[2].status === 'fulfilled' && Array.isArray(results[2].value)) {
+            setDepartmentData(results[2].value);
+          }
+          
+          if (results[3].status === 'fulfilled' && Array.isArray(results[3].value)) {
+            setRoomUtilization(results[3].value);
+          }
           
         } catch (err) {
           console.error("Error loading dashboard data:", err);
@@ -70,15 +82,17 @@ export default function SuperAdminDashboard() {
           toast.error("Failed to load some dashboard data. Please try refreshing.");
           
           // Set fallback data for sections that might have failed
+          // Each service method now has built-in fallback data
           const activities = await SuperAdminDashboardService.getRecentActivity().catch(() => []);
           const progress = await SuperAdminDashboardService.getSemesterProgress().catch(() => []);
           const departments = await SuperAdminDashboardService.getDepartmentDistribution().catch(() => []);
           const rooms = await SuperAdminDashboardService.getRoomUtilization().catch(() => []);
           
-          if (activities.length) setRecentActivity(activities);
-          if (progress.length) setSemesterProgress(progress);
-          if (departments.length) setDepartmentData(departments);
-          if (rooms.length) setRoomUtilization(rooms);
+          // Only set state if we got valid array data back
+          if (Array.isArray(activities) && activities.length) setRecentActivity(activities);
+          if (Array.isArray(progress) && progress.length) setSemesterProgress(progress);
+          if (Array.isArray(departments) && departments.length) setDepartmentData(departments);
+          if (Array.isArray(rooms) && rooms.length) setRoomUtilization(rooms);
           
           setError("Some dashboard data could not be loaded. Please try refreshing the page.");
         }
@@ -97,36 +111,60 @@ export default function SuperAdminDashboard() {
 
   // Event handlers
   const handleAddNewUser = () => {
-    // Navigate to User Management page
-    navigate('/admin/users');
-    
-    // Log the action
-    SuperAdminDashboardService.logActivityToBackend(
-      'Navigation', 
-      'SuperAdmin navigated to Add User page'
-    ).catch(err => console.log('Failed to log activity', err));
+    try {
+      // Navigate to User Management page
+      navigate('/admin/users');
+      
+      // Log the action without awaiting to avoid UI delay
+      SuperAdminDashboardService.logActivityToBackend(
+        'Navigation', 
+        'SuperAdmin navigated to Add User page'
+      );
+      
+      // Show success toast
+      toast.success("Navigating to User Management");
+    } catch (error) {
+      console.error("Navigation error:", error);
+      toast.error("Navigation failed. Please try again.");
+    }
   };
   
   const handleGenerateReport = () => {
-    // Navigate to Reports & Analytics page
-    navigate('/admin/reports');
-    
-    // Log the action
-    SuperAdminDashboardService.logActivityToBackend(
-      'Navigation', 
-      'SuperAdmin navigated to Reports & Analytics page'
-    ).catch(err => console.log('Failed to log activity', err));
+    try {
+      // Navigate to Reports & Analytics page
+      navigate('/admin/reports');
+      
+      // Log the action without awaiting to avoid UI delay
+      SuperAdminDashboardService.logActivityToBackend(
+        'Navigation', 
+        'SuperAdmin navigated to Reports & Analytics page'
+      );
+      
+      // Show success toast
+      toast.success("Generating reports...");
+    } catch (error) {
+      console.error("Navigation error:", error);
+      toast.error("Failed to navigate to Reports. Please try again.");
+    }
   };
   
   const handleManageSemester = () => {
-    // Navigate to Settings & Semester page
-    navigate('/admin/settings');
-    
-    // Log the action
-    SuperAdminDashboardService.logActivityToBackend(
-      'Navigation', 
-      'SuperAdmin navigated to Semester Management page'
-    ).catch(err => console.log('Failed to log activity', err));
+    try {
+      // Navigate to Settings & Semester page
+      navigate('/admin/settings');
+      
+      // Log the action without awaiting to avoid UI delay
+      SuperAdminDashboardService.logActivityToBackend(
+        'Navigation', 
+        'SuperAdmin navigated to Semester Management page'
+      );
+      
+      // Show success toast
+      toast.success("Opening semester management");
+    } catch (error) {
+      console.error("Navigation error:", error);
+      toast.error("Navigation failed. Please try again.");
+    }
   };
 
   return (
