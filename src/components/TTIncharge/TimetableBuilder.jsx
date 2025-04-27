@@ -695,6 +695,9 @@ export default function TimetableBuilder() {
                                     <FiAlertTriangle className="text-red-500 text-xs" />
                                   )}
                                 </div>
+                                <div className="text-xs mt-0.5 truncate" title={courseInSlot.faculty.name}>
+                                  {isMobile ? courseInSlot.faculty.name.split(' ')[1] : courseInSlot.faculty.name}
+                                </div>
                                 {!isCompactView && (
                                   <div className="text-xs mt-0.5">
                                     <span>{courseInSlot.room}</span>
