@@ -10,8 +10,8 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth/auth.routes');
 const dashboardRoutes = require('./routes/dashboard/dashboard.routes');
 const departmentRoutes = require('./routes/dashboard/department.routes');
-const userRoutes = require('./routes/user/user.routes');
-const teacherRoutes = require('./routes/faculty/teacher.routes');
+const userRoutes = require('./routes/dashboard/user.routes');
+const teacherRoutes = require('./routes/dashboard/teacher.routes');
 
 // Initialize Express
 const app = express();
