@@ -1,8 +1,9 @@
 // filepath: /Users/nihalsarandasduggirala/Downloads/engg-timetable/src/components/HODLayout.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar, FiBell, FiSearch, FiChevronDown, FiChevronUp, FiLogOut } from 'react-icons/fi';
 import { logoutUser } from '../Auth/services/Login';
+import { AuthContext } from '../../App';
 
 export default function HODLayout() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
@@ -11,6 +12,7 @@ export default function HODLayout() {
   const [selectedSemester, setSelectedSemester] = useState('Semester 7');
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, setUser } = useContext(AuthContext);
   
   // List of available semesters
   const availableSemesters = [
@@ -39,8 +41,10 @@ export default function HODLayout() {
   const handleLogout = async () => {
     try {
       await logoutUser();
+      // Update auth context
+      setUser(null);
       // Redirect to login page after successful logout
-      navigate('/login');
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);
       // Show error message to user
@@ -106,7 +110,7 @@ export default function HODLayout() {
         {/* Top bar - Fixed */}
         <header className="bg-white shadow flex items-center justify-between p-4 fixed top-0 right-0 left-20 lg:left-64 z-10">
           <div className="flex items-center">
-            <h2 className="text-xl font-semibold text-gray-800">Computer Science Department</h2>
+            <h2 className="text-xl font-semibold text-gray-800">{user?.department || 'Department'}</h2>
             <div className="relative semester-dropdown">
               <div 
                 className="ml-4 flex items-center border rounded-lg px-3 py-1 cursor-pointer hover:bg-gray-50"
@@ -165,8 +169,8 @@ export default function HODLayout() {
                   className="rounded-full h-10 w-10 object-cover border-2 border-teal-500"
                 />
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium">Dr. Sarah Johnson</p>
-                  <p className="text-xs text-gray-500">HOD, Computer Science</p>
+                  <p className="text-sm font-medium">{user?.name || 'HOD'}</p>
+                  <p className="text-xs text-gray-500">{user?.department || 'Department'}</p>
                 </div>
                 {profileDropdownOpen ? 
                   <FiChevronUp className="text-gray-500" /> : 
@@ -177,8 +181,8 @@ export default function HODLayout() {
               {profileDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-20">
                   <div className="px-4 py-3 border-b">
-                    <p className="text-sm font-medium">Dr. Sarah Johnson</p>
-                    <p className="text-xs text-gray-500">sarah.johnson@example.com</p>
+                    <p className="text-sm font-medium">{user?.name || 'HOD'}</p>
+                    <p className="text-xs text-gray-500">{user?.email || 'hod@example.com'}</p>
                   </div>
                   <div className="py-1">
                     <button

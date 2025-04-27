@@ -1,7 +1,8 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { FiMenu, FiBell, FiSearch, FiUser, FiUsers, FiGrid, FiLayers, FiHome, FiFileText, FiSettings, FiBookOpen, FiLogOut, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { logoutUser } from '../Auth/services/Login';
+import { AuthContext } from '../../App';
 
 const navItems = [
   { label: 'Dashboard', icon: <FiGrid />, path: '/admin/dashboard' },
@@ -18,13 +19,27 @@ export default function SuperAdminLayout() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, setUser } = useContext(AuthContext);
+  
+  // Set active nav item based on current path
+  const [activeNavItem, setActiveNavItem] = useState('Dashboard');
+  
+  useEffect(() => {
+    const path = location.pathname;
+    const activeItem = navItems.find(item => path.startsWith(item.path));
+    if (activeItem) {
+      setActiveNavItem(activeItem.label);
+    }
+  }, [location.pathname]);
   
   // Handle logout
   const handleLogout = async () => {
     try {
       await logoutUser();
+      // Update auth context
+      setUser(null);
       // Redirect to login page after successful logout
-      navigate('/login');
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);
       // Show error message to user
@@ -33,7 +48,7 @@ export default function SuperAdminLayout() {
   };
   
   // Close dropdown when clicking outside
-  useState(() => {
+  useEffect(() => {
     const closeDropdown = (e) => {
       if (!e.target.closest('.profile-dropdown')) {
         setProfileDropdownOpen(false);
@@ -55,7 +70,7 @@ export default function SuperAdminLayout() {
         </div>
         <nav className="flex-1 p-2 space-y-2">
           {navItems.map((item) => {
-            const isActive = location.pathname.startsWith(item.path);
+            const isActive = activeNavItem === item.label;
             return (
               <button
                 key={item.label}
@@ -88,7 +103,7 @@ export default function SuperAdminLayout() {
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               >
                 <img src="https://via.placeholder.com/30" alt="avatar" className="rounded-full" />
-                <span className="hidden md:block">Profile</span>
+                <span className="hidden md:block">{user?.name || 'Profile'}</span>
                 {profileDropdownOpen ? 
                   <FiChevronUp className="text-gray-500" /> : 
                   <FiChevronDown className="text-gray-500" />
@@ -98,8 +113,8 @@ export default function SuperAdminLayout() {
               {profileDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-20">
                   <div className="px-4 py-3 border-b">
-                    <p className="text-sm font-medium">Admin User</p>
-                    <p className="text-xs text-gray-500">admin@example.com</p>
+                    <p className="text-sm font-medium">{user?.name || 'Admin User'}</p>
+                    <p className="text-xs text-gray-500">{user?.email || 'admin@example.com'}</p>
                   </div>
                   <div className="py-1">
                     <button

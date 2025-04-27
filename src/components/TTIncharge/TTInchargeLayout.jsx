@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation, useNavigate, Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   FiGrid, 
   FiCalendar, 
@@ -13,16 +13,10 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiMenu,
-  FiLayers,
   FiLogOut
 } from 'react-icons/fi';
 import { logoutUser } from '../Auth/services/Login';
-
-import TTInchargeDashboard from './TTInchargeDashboard';
-import TimetableBuilder from './TimetableBuilder';
-import Conflicts from './Conflicts';
-import RoomAvailability from './RoomAvailability';
-import FacultyTimetable from './FacultyTimetable';
+import { AuthContext } from '../../App';
 
 export default function TTInchargeLayout() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
@@ -32,6 +26,7 @@ export default function TTInchargeLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, setUser } = useContext(AuthContext);
   
   // List of available semesters
   const availableSemesters = [
@@ -60,8 +55,10 @@ export default function TTInchargeLayout() {
   const handleLogout = async () => {
     try {
       await logoutUser();
+      // Update auth context
+      setUser(null);
       // Redirect to login page after successful logout
-      navigate('/login');
+      navigate('/login', { replace: true });
     } catch (error) {
       console.error('Logout failed:', error);
       // Show error message to user
@@ -78,12 +75,10 @@ export default function TTInchargeLayout() {
       setActiveSidebarItem('Timetable Builder');
     } else if (path.includes('/tt/conflicts')) {
       setActiveSidebarItem('Conflicts');
-    } else if (path.includes('/tt/rooms')) {
+    } else if (path.includes('/tt/rooms') || path.includes('/tt/room-availability')) {
       setActiveSidebarItem('Rooms');
-    } else if (path.includes('/tt/faculty-view')) {
-      setActiveSidebarItem('Faculty View');
     } else if (path.includes('/tt/faculty-timetable')) {
-      setActiveSidebarItem('Faculty Timetable');
+      setActiveSidebarItem('Faculty View');
     }
   }, [location]);
   
@@ -229,8 +224,8 @@ export default function TTInchargeLayout() {
                   className="rounded-full h-10 w-10 object-cover border-2 border-indigo-500"
                 />
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium">Prof. James Wilson</p>
-                  <p className="text-xs text-gray-500">TT Incharge, Computer Science</p>
+                  <p className="text-sm font-medium">{user?.name || 'TT Incharge'}</p>
+                  <p className="text-xs text-gray-500">{user?.department || 'Department'}</p>
                 </div>
                 {profileDropdownOpen ? 
                   <FiChevronUp className="text-gray-500" /> : 
@@ -241,8 +236,8 @@ export default function TTInchargeLayout() {
               {profileDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-20">
                   <div className="px-4 py-3 border-b">
-                    <p className="text-sm font-medium">Prof. James Wilson</p>
-                    <p className="text-xs text-gray-500">james.wilson@example.com</p>
+                    <p className="text-sm font-medium">{user?.name || 'TT Incharge'}</p>
+                    <p className="text-xs text-gray-500">{user?.email || 'tt.incharge@example.com'}</p>
                   </div>
                   <div className="py-1">
                     <button
@@ -261,13 +256,7 @@ export default function TTInchargeLayout() {
 
         {/* Main content area with padding top to account for fixed header */}
         <main className="flex-1 p-6 pt-24">
-          <Routes>
-            <Route path="dashboard" element={<TTInchargeDashboard />} />
-            <Route path="timetable-builder" element={<TimetableBuilder />} />
-            <Route path="conflicts" element={<Conflicts />} />
-            <Route path="rooms" element={<RoomAvailability />} />
-            <Route path="faculty-timetable" element={<FacultyTimetable />} />
-          </Routes>
+          <Outlet />
         </main>
       </div>
     </div>

@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { FiUsers, FiCalendar, FiAlertTriangle } from 'react-icons/fi';
 import { BsBuilding } from 'react-icons/bs';
-import SuperAdminDashboardService, { 
-  getDashboardMetrics, 
-  fetchDashboardStats,
-  getRecentActivity, 
-  getSemesterProgress,
-  addNewUser,
-  generateReport,
-  manageSemester,
-  getDepartmentDistribution,
-  getRoomUtilization
-} from './services/SuperAdminDashboard';
+import SuperAdminDashboardService from './services/SuperAdminDashboard';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+
+// Import logger if you have a centralized logging service
+// import logger from '../../services/logger';
 
 export default function SuperAdminDashboard() {
+  const navigate = useNavigate();
   const [metrics, setMetrics] = useState({
     totalUsers: 0,
     totalDepartments: 0,
@@ -35,35 +31,62 @@ export default function SuperAdminDashboard() {
         setError(null);
         
         // Initially set metrics from sync function to show something right away
-        setMetrics(getDashboardMetrics());
-        setRecentActivity(getRecentActivity());
-        setSemesterProgress(getSemesterProgress());
+        setMetrics(SuperAdminDashboardService.getDashboardMetrics());
         
-        // Then fetch actual data asynchronously
-        const statsPromise = fetchDashboardStats();
-        const departmentPromise = getDepartmentDistribution();
-        const roomUtilizationPromise = getRoomUtilization();
+        // Log page view for analytics
+        SuperAdminDashboardService.logActivityToBackend(
+          'PageView', 
+          'SuperAdmin viewed the dashboard'
+        ).catch(err => console.log('Failed to log activity', err));
         
-        // Wait for all promises to resolve
-        const [stats, departments, rooms] = await Promise.all([
-          statsPromise,
-          departmentPromise,
-          roomUtilizationPromise
-        ]);
-        
-        // Update state with real data
-        setMetrics({
-          totalUsers: stats.totalTeachers || 0,
-          totalDepartments: stats.totalDepartments || 0,
-          activeSemesters: 2, // Hardcoded for now, would come from API
-          conflictsToday: 3  // Hardcoded for now, would come from API
-        });
-        
-        setDepartmentData(departments);
-        setRoomUtilization(rooms);
+        try {
+          // Attempt to fetch all data in a single request for better performance
+          const allData = await SuperAdminDashboardService.fetchDashboardStats();
+          
+          // Update state with the actual metrics
+          setMetrics({
+            totalUsers: allData.totalUsers || 0,
+            totalDepartments: allData.totalDepartments || 0,
+            activeSemesters: allData.activeSemesters || 0,
+            conflictsToday: allData.conflictsToday || 0
+          });
+          
+          // Fetch other data separately in parallel
+          const [activities, progress, departments, rooms] = await Promise.all([
+            SuperAdminDashboardService.getRecentActivity(),
+            SuperAdminDashboardService.getSemesterProgress(),
+            SuperAdminDashboardService.getDepartmentDistribution(),
+            SuperAdminDashboardService.getRoomUtilization()
+          ]);
+          
+          setRecentActivity(activities);
+          setSemesterProgress(progress);
+          setDepartmentData(departments);
+          setRoomUtilization(rooms);
+          
+        } catch (err) {
+          console.error("Error loading dashboard data:", err);
+          // Show a toast notification for the error
+          toast.error("Failed to load some dashboard data. Please try refreshing.");
+          
+          // Set fallback data for sections that might have failed
+          const activities = await SuperAdminDashboardService.getRecentActivity().catch(() => []);
+          const progress = await SuperAdminDashboardService.getSemesterProgress().catch(() => []);
+          const departments = await SuperAdminDashboardService.getDepartmentDistribution().catch(() => []);
+          const rooms = await SuperAdminDashboardService.getRoomUtilization().catch(() => []);
+          
+          if (activities.length) setRecentActivity(activities);
+          if (progress.length) setSemesterProgress(progress);
+          if (departments.length) setDepartmentData(departments);
+          if (rooms.length) setRoomUtilization(rooms);
+          
+          setError("Some dashboard data could not be loaded. Please try refreshing the page.");
+        }
       } catch (err) {
-        console.error("Error loading dashboard data:", err);
+        console.error("Fatal error loading dashboard:", err);
         setError("Failed to load dashboard data. Please try again later.");
+        // Log error for monitoring
+        // logger.error("Dashboard load failure", err);
       } finally {
         setIsLoading(false);
       }
@@ -73,9 +96,38 @@ export default function SuperAdminDashboard() {
   }, []);
 
   // Event handlers
-  const handleAddNewUser = () => addNewUser();
-  const handleGenerateReport = () => generateReport();
-  const handleManageSemester = () => manageSemester();
+  const handleAddNewUser = () => {
+    // Navigate to User Management page
+    navigate('/admin/users');
+    
+    // Log the action
+    SuperAdminDashboardService.logActivityToBackend(
+      'Navigation', 
+      'SuperAdmin navigated to Add User page'
+    ).catch(err => console.log('Failed to log activity', err));
+  };
+  
+  const handleGenerateReport = () => {
+    // Navigate to Reports & Analytics page
+    navigate('/admin/reports');
+    
+    // Log the action
+    SuperAdminDashboardService.logActivityToBackend(
+      'Navigation', 
+      'SuperAdmin navigated to Reports & Analytics page'
+    ).catch(err => console.log('Failed to log activity', err));
+  };
+  
+  const handleManageSemester = () => {
+    // Navigate to Settings & Semester page
+    navigate('/admin/settings');
+    
+    // Log the action
+    SuperAdminDashboardService.logActivityToBackend(
+      'Navigation', 
+      'SuperAdmin navigated to Semester Management page'
+    ).catch(err => console.log('Failed to log activity', err));
+  };
 
   return (
     <div className="space-y-6">

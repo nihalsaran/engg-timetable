@@ -31,5 +31,6 @@ dist-ssr
 .env.production.local
 
 Backend/.npmrc
+.npmrc
 Backend/.env
 Backend/engg-timetable-firebase-adminsdk-fbsvc-86822f892e.json

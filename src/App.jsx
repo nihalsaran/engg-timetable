@@ -3,6 +3,7 @@ import { useState, useEffect, createContext, useContext } from 'react'
 import Login from './components/Auth/Login'
 import ForgotPassword from './components/Auth/ForgotPassword'
 import SuperAdminRegistration from './components/Auth/SuperAdminRegistration'
+// Import SuperAdmin components
 import SuperAdminDashboard from './components/SuperAdmin/SuperAdminDashboard'
 import UserManagement from './components/SuperAdmin/UserManagement'
 import TeacherManagement from './components/SuperAdmin/TeacherManagement'
@@ -11,6 +12,7 @@ import DepartmentManagement from './components/SuperAdmin/DepartmentManagement'
 import RoomManagement from './components/SuperAdmin/RoomManagement'
 import ReportsAnalytics from './components/SuperAdmin/ReportsAnalytics'
 import SettingsSemester from './components/SuperAdmin/SettingsSemester'
+// Import HOD components
 import HODDashboard from './components/HOD/HODDashboard'
 import CourseManagement from './components/HOD/CourseManagement'
 import HODLayout from './components/HOD/HODLayout'
@@ -25,9 +27,7 @@ import Conflicts from './components/TTIncharge/Conflicts'
 import RoomAvailability from './components/TTIncharge/RoomAvailability'
 import FacultyTimetable from './components/TTIncharge/FacultyTimetable'
 // Import authentication functions
-import { getCurrentUser, checkSession, initializeAuth } from './components/Auth/services/Login'
-// Import Firebase auth for auth state changes
-import { auth, onAuthStateChanged } from './firebase/config.js'
+import { getCurrentUser, checkSession, isAuthenticated } from './components/Auth/services/Login'
 
 // Create Authentication Context
 export const AuthContext = createContext(null);
@@ -35,17 +35,18 @@ export const AuthContext = createContext(null);
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const location = useLocation();
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading, sessionChecked } = useContext(AuthContext);
 
-  if (loading) {
-    // You could return a loading spinner here
+  // Wait for both loading to complete and session check before making any decisions
+  if (loading || !sessionChecked) {
     return <div className="h-screen flex items-center justify-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
     </div>;
   }
   
-  // Not logged in
+  // Not logged in - save the location they were trying to access
   if (!user) {
+    // Use replace here to avoid adding the redirect to the browser history
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -68,6 +69,20 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   return children;
 };
 
+// Helper function to get default path for a role
+export const getRoleDefaultPath = (role) => {
+  switch(role) {
+    case 'superadmin':
+      return '/admin/dashboard';
+    case 'hod':
+      return '/hod/dashboard';
+    case 'tt_incharge':
+      return '/tt/dashboard';
+    default:
+      return '/login';
+  }
+};
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -77,30 +92,32 @@ function App() {
   useEffect(() => {
     const verifyAuth = async () => {
       try {
-        // Initialize Firebase auth listener
-        initializeAuth();
+        setLoading(true);
         
-        // Set up Firebase auth state listener
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          if (firebaseUser) {
-            // User is signed in, get their complete profile
-            const userData = await getCurrentUser();
-            setUser(userData);
-          } else {
-            // User is signed out
-            setUser(null);
-          }
+        // First check if we have a token
+        if (!isAuthenticated()) {
+          setUser(null);
           setLoading(false);
           setSessionChecked(true);
-        });
+          return;
+        }
         
-        // Clean up the listener when component unmounts
-        return () => unsubscribe();
+        // Then verify if the session is valid
+        const isValid = await checkSession();
         
+        if (isValid) {
+          // Get user data if session is valid
+          const userData = await getCurrentUser();
+          setUser(userData);
+        } else {
+          // Clear user data if session is invalid
+          setUser(null);
+        }
       } catch (error) {
         console.error("Authentication verification failed:", error);
         // Clear any invalid auth data
-        localStorage.removeItem('userData');
+        setUser(null);
+      } finally {
         setLoading(false);
         setSessionChecked(true);
       }
@@ -112,8 +129,8 @@ function App() {
   // Handle network-related auth issues
   useEffect(() => {
     const handleOnline = async () => {
-      // When coming back online, verify auth state
-      if (localStorage.getItem('userData')) {
+      // When coming back online, verify auth state if user was previously logged in
+      if (isAuthenticated()) {
         try {
           const isValid = await checkSession();
           if (!isValid && user) {
@@ -190,6 +207,9 @@ function App() {
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="settings" element={<SettingsSemester />} />
           </Route>
+          
+          {/* Catch-all route for invalid paths */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AuthContext.Provider>

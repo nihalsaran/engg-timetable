@@ -18,6 +18,11 @@ export const loginUser = async (credentials) => {
     const userObject = response.user;
     localStorage.setItem('userData', JSON.stringify(userObject));
     
+    // Store the JWT token for authentication
+    if (response.token) {
+      localStorage.setItem('token', response.token);
+    }
+    
     return userObject;
   } catch (error) {
     console.error('Authentication failed:', error);
@@ -36,7 +41,7 @@ export const logoutUser = async () => {
     
     // Clear local storage
     localStorage.removeItem('userData');
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
     
     return true;
   } catch (error) {
@@ -44,7 +49,7 @@ export const logoutUser = async () => {
     
     // Even if server logout fails, clear local storage
     localStorage.removeItem('userData');
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
     
     throw new Error('Logout failed: ' + error.message);
   }
@@ -76,7 +81,7 @@ export const getCurrentUser = async () => {
   } catch (error) {
     // User is not logged in
     localStorage.removeItem('userData');
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('token');
     return null;
   }
 };
@@ -87,12 +92,30 @@ export const getCurrentUser = async () => {
  */
 export const checkSession = async () => {
   try {
+    // Check if we have a token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return false;
+    }
+    
     // Use the API to check if the session is valid
-    return await authAPI.checkSession();
+    const isValid = await authAPI.checkSession();
+    
+    if (!isValid) {
+      // Clean up on invalid session
+      localStorage.removeItem('userData');
+      localStorage.removeItem('token');
+    }
+    
+    return isValid;
   } catch (error) {
-    // Session is invalid, clean up
-    localStorage.removeItem('userData');
-    localStorage.removeItem('authToken');
+    console.error('Session check failed:', error);
+    // Only clear tokens on server rejection, not on network errors
+    // This helps prevent logout when just navigating with poor connection
+    if (error.response) {
+      localStorage.removeItem('userData');
+      localStorage.removeItem('token');
+    }
     return false;
   }
 };
@@ -104,4 +127,20 @@ export const checkSession = async () => {
 export const initializeAuth = () => {
   // Nothing needed here anymore, as we'll use JWT tokens
   return true;
+};
+
+/**
+ * Get the current authentication token
+ * @returns {string|null} - The token or null if not available
+ */
+export const getAuthToken = () => {
+  return localStorage.getItem('token');
+};
+
+/**
+ * Check if user is authenticated
+ * @returns {boolean} - True if user is authenticated
+ */
+export const isAuthenticated = () => {
+  return !!localStorage.getItem('token');
 };

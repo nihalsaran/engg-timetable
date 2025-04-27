@@ -5,16 +5,16 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampusIllustration from './CampusIllustration';
 import { loginUser, checkSession } from './services/Login';
-import { AuthContext } from '../../App';
+import { AuthContext, getRoleDefaultPath } from '../../App';
 
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [isCheckingSession, setIsCheckingSession] = useState(true); // Add this state to track session check
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const { setUser, user } = useContext(AuthContext);
+  const { setUser, user, loading } = useContext(AuthContext);
 
   // Check for messages from redirection (like password reset success)
   useEffect(() => {
@@ -25,56 +25,36 @@ const Login = () => {
 
   // Check if the user is already logged in
   useEffect(() => {
-    // If user context already exists, don't check session again
+    // Skip if app is still loading auth state
+    if (loading) return;
+    
+    // If user context already exists, check if we need to redirect
     if (user) {
+      // Get the "from" location if it exists
       const from = location.state?.from?.pathname;
-      if (from) {
-        navigate(from);
-      } else {
-        // Redirect based on user role
-        switch(user.role) {
-          case 'admin':
-            navigate('/admin/dashboard');
-            break;
-          case 'hod':
-            navigate('/hod/dashboard');
-            break;
-          case 'tt_incharge':
-            navigate('/tt/dashboard');
-            break;
-          default:
-            // Stay on login page
-        }
+      
+      // Check if we came here through browser back button
+      const isNavigatedByBackButton = window.performance && 
+        window.performance.navigation && 
+        window.performance.navigation.type === 2;
+      
+      // Skip redirect if the user navigated here with the back button
+      if (isNavigatedByBackButton) {
+        return;
       }
+      
+      // Redirect based on intended location or user role
+      const destinationPath = from || getRoleDefaultPath(user.role);
+      if (destinationPath !== '/login') {
+        navigate(destinationPath, { replace: true });
+      }
+      
+      setIsCheckingSession(false);
       return;
     }
     
-    const verifySession = async () => {
-      if (isLoading) return; // Don't check session if we're already logging in
-      
-      try {
-        setIsCheckingSession(true);
-        const isLoggedIn = await checkSession();
-        if (isLoggedIn) {
-          // Get destination from location state or use default based on role
-          const from = location.state?.from?.pathname;
-          if (from) {
-            navigate(from);
-          } else {
-            // Will be redirected based on role by the protected route component
-            navigate('/admin/dashboard');
-          }
-        }
-      } catch (error) {
-        console.error("Session verification failed:", error);
-        // Stay on login page
-      } finally {
-        setIsCheckingSession(false);
-      }
-    };
-    
-    verifySession();
-  }, [navigate, location, user, isLoading]);
+    setIsCheckingSession(false);
+  }, [navigate, location, user, loading, setUser]);
 
   const formik = useFormik({
     initialValues: {
@@ -101,25 +81,10 @@ const Login = () => {
         
         // Get destination from location state or use default based on role
         const from = location.state?.from?.pathname;
+        const destinationPath = from || getRoleDefaultPath(userData.role);
         
-        // Redirect based on user role
-        if (from) {
-          navigate(from);
-        } else {
-          switch(userData.role) {
-            case 'superadmin':
-              navigate('/admin/dashboard');
-              break;
-            case 'hod':
-              navigate('/hod/dashboard');
-              break;
-            case 'tt_incharge':
-              navigate('/tt/dashboard');
-              break;
-            default:
-              navigate('/login');
-          }
-        }
+        // Redirect to appropriate destination
+        navigate(destinationPath, { replace: true });
       } catch (error) {
         console.error('Login failed:', error);
         setLoginError(error.message || 'Login failed. Please try again.');
@@ -128,6 +93,18 @@ const Login = () => {
       }
     },
   });
+
+  // If the user is authenticated and this page was accessed via the back button,
+  // show a minimal loading state instead of the full login form
+  if ((user && window.performance && window.performance.navigation && window.performance.navigation.type === 2) || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900">
+        <div className="animate-pulse">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900">

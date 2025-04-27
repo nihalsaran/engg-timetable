@@ -4,9 +4,28 @@
  * 
  * This service handles all API calls to the backend authentication endpoints
  */
+import axios from 'axios';
 
 // Base API URL - should come from environment variables in production
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+
+// Create axios instance with base URL
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true // Include cookies if needed
+});
+
+// Add auth token to requests if available
+api.interceptors.request.use(
+  config => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => Promise.reject(error)
+);
 
 /**
  * Login a user with email and password
@@ -15,30 +34,11 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
  */
 export const login = async (credentials) => {
   try {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(credentials),
-      credentials: 'include'  // Include cookies if needed
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Login failed');
-    }
-    
-    // Store the token in localStorage
-    if (data.token) {
-      localStorage.setItem('authToken', data.token);
-    }
-    
-    return data;
+    const response = await api.post('/auth/login', credentials);
+    return response.data;
   } catch (error) {
     console.error('Login API error:', error);
-    throw error;
+    throw error.response?.data?.message || 'Login failed';
   }
 };
 
@@ -49,29 +49,11 @@ export const login = async (credentials) => {
  */
 export const registerSuperAdmin = async (userData) => {
   try {
-    const response = await fetch(`${API_URL}/auth/register/super-admin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(userData)
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Registration failed');
-    }
-    
-    // Store the token if provided
-    if (data.token) {
-      localStorage.setItem('authToken', data.token);
-    }
-    
-    return data;
+    const response = await api.post('/auth/register/super-admin', userData);
+    return response.data;
   } catch (error) {
     console.error('SuperAdmin registration API error:', error);
-    throw error;
+    throw error.response?.data?.message || 'Registration failed';
   }
 };
 
@@ -82,24 +64,11 @@ export const registerSuperAdmin = async (userData) => {
  */
 export const forgotPassword = async (data) => {
   try {
-    const response = await fetch(`${API_URL}/auth/forgot-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-
-    const responseData = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(responseData.message || 'Password reset request failed');
-    }
-    
-    return responseData;
+    const response = await api.post('/auth/forgot-password', data);
+    return response.data;
   } catch (error) {
     console.error('Forgot password API error:', error);
-    throw error;
+    throw error.response?.data?.message || 'Password reset request failed';
   }
 };
 
@@ -110,24 +79,11 @@ export const forgotPassword = async (data) => {
  */
 export const resetPassword = async (data) => {
   try {
-    const response = await fetch(`${API_URL}/auth/reset-password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-
-    const responseData = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(responseData.message || 'Password reset failed');
-    }
-    
-    return responseData;
+    const response = await api.post('/auth/reset-password', data);
+    return response.data;
   } catch (error) {
     console.error('Reset password API error:', error);
-    throw error;
+    throw error.response?.data?.message || 'Password reset failed';
   }
 };
 
@@ -137,36 +93,10 @@ export const resetPassword = async (data) => {
  */
 export const getCurrentUser = async () => {
   try {
-    const token = localStorage.getItem('authToken');
-    
-    if (!token) {
-      return null;
-    }
-    
-    const response = await fetch(`${API_URL}/auth/me`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        // Token is invalid or expired, clear it
-        localStorage.removeItem('authToken');
-        return null;
-      }
-      
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to get user data');
-    }
-    
-    const data = await response.json();
-    return data.user;
+    const response = await api.get('/auth/me');
+    return response.data.user;
   } catch (error) {
     console.error('Get current user API error:', error);
-    // Clear token on error
-    localStorage.removeItem('authToken');
     return null;
   }
 };
@@ -177,28 +107,10 @@ export const getCurrentUser = async () => {
  */
 export const logout = async () => {
   try {
-    const token = localStorage.getItem('authToken');
-    
-    if (!token) {
-      return { success: true };
-    }
-    
-    const response = await fetch(`${API_URL}/auth/logout`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    // Clear token from localStorage
-    localStorage.removeItem('authToken');
-    
-    const data = await response.json();
-    return data;
+    const response = await api.post('/auth/logout');
+    return response.data;
   } catch (error) {
     console.error('Logout API error:', error);
-    // Clear token even if logout fails on server
-    localStorage.removeItem('authToken');
     return { success: true };
   }
 };
@@ -209,32 +121,29 @@ export const logout = async () => {
  */
 export const checkSession = async () => {
   try {
-    const token = localStorage.getItem('authToken');
-    
+    // First check if we have a token before making an API call
+    const token = localStorage.getItem('token');
     if (!token) {
       return false;
     }
     
-    const response = await fetch(`${API_URL}/auth/check-session`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    const response = await api.get('/auth/check-session', {
+      // Adding a cache-busting parameter to prevent browsers from caching this check
+      params: { _t: new Date().getTime() }
     });
-
-    const data = await response.json();
-    
-    if (!data.valid) {
-      // Clear invalid token
-      localStorage.removeItem('authToken');
-    }
-    
-    return data.valid;
+    return response.data.valid;
   } catch (error) {
-    console.error('Check session API error:', error);
-    // Clear token on error
-    localStorage.removeItem('authToken');
-    return false;
+    // Only treat actual auth failures as invalid sessions
+    // Network errors should not invalidate sessions
+    if (error.response) {
+      console.error('Check session API error with response:', error.response.status);
+      return false;
+    } else {
+      // Assume the session is still valid if there's a network error
+      // This prevents logout when using back button with poor connectivity
+      console.error('Check session network error:', error);
+      return true;
+    }
   }
 };
 
@@ -245,30 +154,10 @@ export const checkSession = async () => {
  */
 export const createUser = async (userData) => {
   try {
-    const token = localStorage.getItem('authToken');
-    
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-    
-    const response = await fetch(`${API_URL}/auth/users`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(userData)
-    });
-
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to create user');
-    }
-    
-    return data.user;
+    const response = await api.post('/auth/users', userData);
+    return response.data.user;
   } catch (error) {
     console.error('Create user API error:', error);
-    throw error;
+    throw error.response?.data?.message || 'Failed to create user';
   }
 };
