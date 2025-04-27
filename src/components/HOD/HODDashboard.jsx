@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
-import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar, FiBell, FiSearch, FiChevronDown } from 'react-icons/fi';
+import { FiBell, FiSearch, FiChevronDown, FiUsers, FiBook, FiCalendar } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { getSidebarItems, getDashboardMetrics, getRecentActivities, handleSidebarNavigation } from './services/HODDashboard';
 
 export default function HODDashboard() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
   const navigate = useNavigate();
-
-  const sidebarItems = [
-    { label: 'Dashboard', icon: <FiGrid size={18} />, path: '/hod-dashboard' },
-    { label: 'Courses', icon: <FiBook size={18} />, path: '/courses' },
-    { label: 'Faculty', icon: <FiUsers size={18} />, path: '/faculty' },
-    { label: 'Reports', icon: <FiFileText size={18} />, path: '/reports' },
-    { label: 'Timetable', icon: <FiCalendar size={18} />, path: '/timetable' },
-  ];
+  
+  // Get data from services
+  const sidebarItems = getSidebarItems();
+  const metrics = getDashboardMetrics();
+  const recentActivities = getRecentActivities();
 
   const handleNavigation = (path, label) => {
-    setActiveSidebarItem(label);
-    navigate(path);
+    handleSidebarNavigation(navigate, path, label, setActiveSidebarItem);
   };
 
   return (
@@ -34,8 +31,8 @@ export default function HODDashboard() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-700">Faculty Assigned</h2>
-                <p className="text-3xl font-bold text-teal-600">15</p>
-                <p className="text-sm text-gray-500">3 new this week</p>
+                <p className="text-3xl font-bold text-teal-600">{metrics.faculty.total}</p>
+                <p className="text-sm text-gray-500">{metrics.faculty.newThisWeek} new this week</p>
               </div>
             </div>
 
@@ -45,8 +42,8 @@ export default function HODDashboard() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-700">Total Courses</h2>
-                <p className="text-3xl font-bold text-blue-600">12</p>
-                <p className="text-sm text-gray-500">2 pending approval</p>
+                <p className="text-3xl font-bold text-blue-600">{metrics.courses.total}</p>
+                <p className="text-sm text-gray-500">{metrics.courses.pendingApproval} pending approval</p>
               </div>
             </div>
 
@@ -56,9 +53,9 @@ export default function HODDashboard() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-700">Timetable Status</h2>
-                <p className="text-xl font-bold text-indigo-600">In Progress</p>
+                <p className="text-xl font-bold text-indigo-600">{metrics.timetable.status}</p>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                  <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: '70%' }}></div>
+                  <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${metrics.timetable.completionPercentage}%` }}></div>
                 </div>
               </div>
             </div>
@@ -95,12 +92,12 @@ export default function HODDashboard() {
               <button className="text-sm text-teal-600 hover:underline">View All</button>
             </div>
             <div className="space-y-4">
-              {[...Array(3)].map((_, idx) => (
+              {recentActivities.map((activity, idx) => (
                 <div key={idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition">
-                  <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-teal-500' : idx === 1 ? 'bg-blue-500' : 'bg-indigo-500'}`}></div>
+                  <div className={`w-2 h-2 rounded-full ${activity.colorClass}`}></div>
                   <div className="flex-1">
-                    <p className="text-gray-800">{idx === 0 ? 'Dr. Alex Johnson assigned to CS301' : idx === 1 ? 'New course CS405 added' : 'Timetable draft updated'}</p>
-                    <p className="text-xs text-gray-500">{idx === 0 ? '2 hours ago' : idx === 1 ? 'Yesterday' : '2 days ago'}</p>
+                    <p className="text-gray-800">{activity.description}</p>
+                    <p className="text-xs text-gray-500">{activity.timeAgo}</p>
                   </div>
                 </div>
               ))}
