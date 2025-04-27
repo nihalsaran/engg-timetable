@@ -9,6 +9,7 @@ const departmentRoutes = require('./superadmin-dashboard/department.routes');
 const teacherRoutes = require('./superadmin-dashboard/teacher.routes');
 const roomRoutes = require('./superadmin-dashboard/room.routes');
 const userRoutes = require('./superadmin-dashboard/user.routes');
+const hodDashboardRoutes = require('./hod/dashboard.routes');
 
 // Register routes
 router.use('/auth', authRoutes);
@@ -17,5 +18,6 @@ router.use('/departments', departmentRoutes);
 router.use('/teachers', teacherRoutes);
 router.use('/rooms', roomRoutes);
 router.use('/users', userRoutes);
+router.use('/hod/dashboard', hodDashboardRoutes);
 
 module.exports = router;

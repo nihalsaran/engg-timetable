@@ -1,25 +1,58 @@
-import React, { useState } from 'react';
-import { FiBell, FiSearch, FiChevronDown, FiUsers, FiBook, FiCalendar } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiBell, FiSearch, FiChevronDown, FiUsers, FiBook, FiCalendar, FiGrid, FiFileText } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import { getSidebarItems, getDashboardMetrics, getRecentActivities, handleSidebarNavigation } from './services/HODDashboard';
+import { fetchAllDashboardData } from '../../api/services/hod.dashboard.api';
 
 export default function HODDashboard() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
+  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState({
+    metrics: {
+      faculty: { total: 0, newThisWeek: 0 },
+      courses: { total: 0, pendingApproval: 0 },
+      timetable: { status: 'Loading...', completionPercentage: 0 }
+    },
+    recentActivity: [],
+    sidebarItems: []
+  });
   const navigate = useNavigate();
   
-  // Get data from services
-  const sidebarItems = getSidebarItems();
-  const metrics = getDashboardMetrics();
-  const recentActivities = getRecentActivities();
-
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetchAllDashboardData();
+        if (response && response.success) {
+          setDashboardData(response.data);
+        } else {
+          console.error('Failed to fetch dashboard data');
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadDashboardData();
+  }, []);
+  
   const handleNavigation = (path, label) => {
-    handleSidebarNavigation(navigate, path, label, setActiveSidebarItem);
+    setActiveSidebarItem(label);
+    navigate(path);
   };
-
-  // Render sidebar items with icon components (not JSX elements)
-  const renderSidebarIcon = (item) => {
-    const IconComponent = item.icon;
-    return <IconComponent size={item.iconSize} />;
+  
+  // Map icon strings to actual React components
+  const getIconComponent = (iconName) => {
+    const iconMap = {
+      FiGrid: FiGrid,
+      FiBook: FiBook,
+      FiUsers: FiUsers,
+      FiFileText: FiFileText,
+      FiCalendar: FiCalendar
+    };
+    
+    return iconMap[iconName] || FiGrid;
   };
 
   return (
@@ -37,8 +70,12 @@ export default function HODDashboard() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-700">Faculty Assigned</h2>
-                <p className="text-3xl font-bold text-teal-600">{metrics.faculty.total}</p>
-                <p className="text-sm text-gray-500">{metrics.faculty.newThisWeek} new this week</p>
+                <p className="text-3xl font-bold text-teal-600">
+                  {isLoading ? '...' : dashboardData.metrics.faculty.total}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {isLoading ? '...' : dashboardData.metrics.faculty.newThisWeek} new this week
+                </p>
               </div>
             </div>
 
@@ -48,8 +85,12 @@ export default function HODDashboard() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-700">Total Courses</h2>
-                <p className="text-3xl font-bold text-blue-600">{metrics.courses.total}</p>
-                <p className="text-sm text-gray-500">{metrics.courses.pendingApproval} pending approval</p>
+                <p className="text-3xl font-bold text-blue-600">
+                  {isLoading ? '...' : dashboardData.metrics.courses.total}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {isLoading ? '...' : dashboardData.metrics.courses.pendingApproval} pending approval
+                </p>
               </div>
             </div>
 
@@ -59,9 +100,15 @@ export default function HODDashboard() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-700">Timetable Status</h2>
-                <p className="text-xl font-bold text-indigo-600">{metrics.timetable.status}</p>
+                <p className="text-xl font-bold text-indigo-600">
+                  {isLoading ? 'Loading...' : dashboardData.metrics.timetable.status}
+                </p>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                  <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${metrics.timetable.completionPercentage}%` }}></div>
+                  <div className="bg-indigo-600 h-2.5 rounded-full" 
+                    style={{ 
+                      width: `${isLoading ? 0 : dashboardData.metrics.timetable.completionPercentage}%` 
+                    }}>
+                  </div>
                 </div>
               </div>
             </div>
@@ -71,7 +118,10 @@ export default function HODDashboard() {
           <div className="bg-white p-6 rounded-2xl shadow-md">
             <h2 className="text-xl font-semibold mb-6 text-gray-800">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button className="px-6 py-4 rounded-xl bg-gradient-to-r from-teal-500 to-teal-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group">
+              <button 
+                onClick={() => navigate('/faculty')}
+                className="px-6 py-4 rounded-xl bg-gradient-to-r from-teal-500 to-teal-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group"
+              >
                 <span className="text-2xl group-hover:scale-110 transition">📘</span>
                 <span>Assign Faculty</span>
               </button>
@@ -84,7 +134,10 @@ export default function HODDashboard() {
                 <span>View Timetable</span>
               </button>
 
-              <button className="px-6 py-4 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group">
+              <button 
+                onClick={() => navigate('/courses')}
+                className="px-6 py-4 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group"
+              >
                 <span className="text-2xl group-hover:scale-110 transition">➕</span>
                 <span>Add Course</span>
               </button>
@@ -98,15 +151,19 @@ export default function HODDashboard() {
               <button className="text-sm text-teal-600 hover:underline">View All</button>
             </div>
             <div className="space-y-4">
-              {recentActivities.map((activity, idx) => (
-                <div key={idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition">
-                  <div className={`w-2 h-2 rounded-full ${activity.colorClass}`}></div>
-                  <div className="flex-1">
-                    <p className="text-gray-800">{activity.description}</p>
-                    <p className="text-xs text-gray-500">{activity.timeAgo}</p>
+              {isLoading ? (
+                <p className="text-gray-500">Loading activities...</p>
+              ) : (
+                dashboardData.recentActivity.map((activity, idx) => (
+                  <div key={activity.id || idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition">
+                    <div className={`w-2 h-2 rounded-full ${activity.colorClass}`}></div>
+                    <div className="flex-1">
+                      <p className="text-gray-800">{activity.description}</p>
+                      <p className="text-xs text-gray-500">{activity.timeAgo}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </main>
