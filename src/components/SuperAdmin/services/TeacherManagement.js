@@ -1,329 +1,368 @@
-// TeacherManagement.js - Updated to integrate with Appwrite
-import { databases, ID, Query } from '../../../appwrite/config';
-import { auth, createUserWithEmailAndPassword } from '../../../firebase/config';
+// TeacherManagement.js - Updated to use backend API instead of direct Appwrite/Firebase access
+import axios from 'axios';
 
-// Appwrite database and collection IDs
-const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || 'default';
-const TEACHERS_COLLECTION = 'teachers';
+// API base URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-// Subject areas that teachers can specialize in
-export const subjectAreas = [
-  'Algorithms & Data Structures',
-  'Artificial Intelligence',
-  'Computer Networks',
-  'Database Systems',
-  'Operating Systems',
-  'Software Engineering',
-  'Web Development',
-  'Machine Learning',
-  'Embedded Systems',
-  'Cybersecurity',
-  'Cloud Computing',
-  'Mobile Development',
-  'Computer Architecture',
-  'Theoretical Computer Science',
-  'Graphics & Visualization'
-];
+// Subject areas that teachers can specialize in (now loaded from backend)
+let cachedSubjectAreas = null;
 
-// Department options
-export const departments = [
-  'Computer Science', 
-  'Electrical Engineering', 
-  'Mechanical Engineering',
-  'Civil Engineering',
-  'Chemical Engineering'
-];
+// Department options (now loaded from backend)
+let cachedDepartments = null;
 
-// Sample teachers data for fallback if Appwrite fails
-export const dummyTeachers = [
+// Sample teachers data for fallback if API fails
+const dummyTeachers = [
   { id: 1, name: 'Dr. Jane Smith', email: 'jane@univ.edu', department: 'Computer Science', expertise: ['Algorithms & Data Structures', 'Artificial Intelligence'], qualification: 'Ph.D Computer Science', experience: 8, active: true },
   { id: 2, name: 'Prof. Michael Johnson', email: 'michael@univ.edu', department: 'Electrical Engineering', expertise: ['Computer Networks', 'Embedded Systems'], qualification: 'Ph.D Electrical Engineering', experience: 12, active: true },
   { id: 3, name: 'Dr. Sarah Williams', email: 'sarah@univ.edu', department: 'Computer Science', expertise: ['Database Systems', 'Web Development'], qualification: 'Ph.D Information Systems', experience: 6, active: false },
 ];
 
 /**
- * Fetches all faculty members from Appwrite
+ * Set the auth token for API requests
+ * @param {string} token - JWT auth token
+ */
+const setAuthHeader = (token) => {
+  if (token) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete axios.defaults.headers.common['Authorization'];
+  }
+};
+
+/**
+ * Initialize the service with token from local storage
+ */
+const initService = () => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    setAuthHeader(token);
+  }
+};
+
+// Initialize the service when imported
+initService();
+
+/**
+ * Fetches all faculty members from backend API
  * @returns {Promise} Promise object with faculty data
  */
-export const fetchTeachers = async () => {
+const fetchTeachers = async () => {
   try {
-    const response = await databases.listDocuments(
-      DB_ID,
-      TEACHERS_COLLECTION
-    );
+    const response = await axios.get(`${API_URL}/teachers`);
     
-    const teachers = response.documents.map(doc => ({
-      id: doc.$id,
-      name: doc.name,
-      email: doc.email,
-      department: doc.department,
-      expertise: doc.expertise || [],
-      qualification: doc.qualification,
-      experience: doc.experience,
-      active: doc.active,
-      userId: doc.userId
-    }));
-
-    return {
-      success: true,
-      teachers,
-      error: null
-    };
+    if (response.data.success) {
+      return {
+        success: true,
+        teachers: response.data.teachers,
+        error: null
+      };
+    } else {
+      return {
+        success: false,
+        teachers: dummyTeachers,
+        error: response.data.message || 'Failed to load teachers'
+      };
+    }
   } catch (error) {
-    console.error('Error fetching teachers from Appwrite:', error);
+    console.error('Error fetching teachers:', error);
     return {
       success: false,
       teachers: dummyTeachers,
-      error: 'Failed to load teachers'
+      error: error.response?.data?.message || 'Failed to load teachers'
     };
   }
 };
 
 /**
- * Create a new teacher using Firebase for auth and Appwrite for data
+ * Create a new teacher using backend API
  * @param {Object} teacherData - The teacher data to create
  * @returns {Promise} Promise object with result
  */
-export const createTeacher = async (teacherData) => {
+const createTeacher = async (teacherData) => {
   try {
-    // Create user account in Firebase Auth
-    const { name, email, password } = teacherData;
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const userId = userCredential.user.uid;
+    const response = await axios.post(`${API_URL}/teachers`, teacherData);
     
-    // Create teacher document in Appwrite
-    const teacherId = ID.unique();
-    const facultyData = {
-      userId,
-      name: teacherData.name,
-      email: teacherData.email,
-      department: teacherData.department,
-      expertise: teacherData.expertise,
-      qualification: teacherData.qualification,
-      experience: parseInt(teacherData.experience),
-      active: teacherData.active,
-      role: 'Faculty',
-      maxHours: 40, // Default max teaching hours per week
-      status: 'available',
-      createdAt: new Date().toISOString()
-    };
-    
-    const response = await databases.createDocument(
-      DB_ID,
-      TEACHERS_COLLECTION,
-      teacherId,
-      facultyData
-    );
-    
-    return {
-      success: true,
-      faculty: {
-        id: response.$id,
-        ...facultyData
-      },
-      error: null
-    };
+    if (response.data.success) {
+      return {
+        success: true,
+        faculty: response.data.teacher,
+        error: null
+      };
+    } else {
+      return {
+        success: false,
+        faculty: null,
+        error: response.data.message || 'Failed to create teacher'
+      };
+    }
   } catch (error) {
     console.error('Error creating teacher:', error);
     return {
       success: false,
       faculty: null,
-      error: error.message || 'Failed to create teacher'
+      error: error.response?.data?.message || 'Failed to create teacher'
     };
   }
 };
 
 /**
- * Update an existing teacher in Appwrite
+ * Update an existing teacher using backend API
  * @param {string} id - The teacher ID to update
  * @param {Object} teacherData - The teacher data to update
  * @returns {Promise} Promise object with result
  */
-export const updateTeacher = async (id, teacherData) => {
+const updateTeacher = async (id, teacherData) => {
   try {
-    // Password updates should be handled with Firebase Auth
-    if (teacherData.password) {
-      console.log("Password updates should be handled separately with Firebase Auth");
+    const response = await axios.put(`${API_URL}/teachers/${id}`, teacherData);
+    
+    if (response.data.success) {
+      return {
+        success: true,
+        faculty: response.data.teacher,
+        error: null
+      };
+    } else {
+      return {
+        success: false,
+        faculty: null,
+        error: response.data.message || 'Failed to update teacher'
+      };
     }
-    
-    // Update teacher document in Appwrite
-    const updatedData = {
-      name: teacherData.name,
-      department: teacherData.department,
-      expertise: teacherData.expertise,
-      qualification: teacherData.qualification,
-      experience: parseInt(teacherData.experience),
-      active: teacherData.active,
-      updatedAt: new Date().toISOString()
-    };
-    
-    const response = await databases.updateDocument(
-      DB_ID,
-      TEACHERS_COLLECTION,
-      id,
-      updatedData
-    );
-    
-    return {
-      success: true,
-      faculty: {
-        id: response.$id,
-        ...updatedData
-      },
-      error: null
-    };
   } catch (error) {
-    console.error('Error updating teacher in Appwrite:', error);
+    console.error('Error updating teacher:', error);
     return {
       success: false,
       faculty: null,
-      error: error.message || 'Failed to update teacher'
+      error: error.response?.data?.message || 'Failed to update teacher'
     };
   }
 };
 
 /**
- * Delete a teacher from Appwrite
+ * Delete a teacher using backend API
  * @param {string} id - The teacher ID to delete
  * @returns {Promise} Promise object with result
  */
-export const deleteTeacher = async (id) => {
+const deleteTeacher = async (id) => {
   try {
-    // Note: This only removes the teacher from Appwrite, not from Firebase Auth
-    await databases.deleteDocument(
-      DB_ID,
-      TEACHERS_COLLECTION,
-      id
-    );
+    const response = await axios.delete(`${API_URL}/teachers/${id}`);
     
-    return {
-      success: true,
-      error: null
-    };
+    if (response.data.success) {
+      return {
+        success: true,
+        error: null
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data.message || 'Failed to delete teacher'
+      };
+    }
   } catch (error) {
-    console.error('Error deleting teacher from Appwrite:', error);
+    console.error('Error deleting teacher:', error);
     return {
       success: false,
-      error: error.message || 'Failed to delete teacher'
+      error: error.response?.data?.message || 'Failed to delete teacher'
     };
   }
 };
 
 /**
- * Process faculty bulk import from JSON file using Appwrite
+ * Process faculty bulk import using backend API
  * @param {Array} jsonData - Array of faculty data from JSON file
  * @returns {Promise} Promise with results of import operation
  */
-export const processFacultyImport = async (jsonData) => {
+const processFacultyImport = async (jsonData) => {
   try {
-    // Validate the JSON structure
-    if (!Array.isArray(jsonData)) {
-      throw new Error('Invalid JSON format. Expected an array of faculty members.');
-    }
+    const response = await axios.post(`${API_URL}/teachers/import`, jsonData);
     
-    // Process each faculty member in the dataset
-    const results = [];
-    for (const faculty of jsonData) {
-      // Basic validation
-      if (!faculty.name || !faculty.email || !faculty.department) {
-        results.push({
-          name: faculty.name || 'Unknown',
-          success: false,
-          error: 'Missing required fields (name, email, or department)'
-        });
-        continue;
-      }
-      
-      try {
-        // Create user in Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(
-          auth, 
-          faculty.email, 
-          faculty.password || 'DefaultPass123!'
-        );
-        const userId = userCredential.user.uid;
-        
-        // Create teacher document in Appwrite
-        const teacherId = ID.unique();
-        const facultyData = {
-          userId,
-          name: faculty.name,
-          email: faculty.email,
-          department: faculty.department,
-          expertise: faculty.expertise || [],
-          qualification: faculty.qualification || '',
-          experience: parseInt(faculty.experience) || 0,
-          active: faculty.active !== undefined ? faculty.active : true,
-          role: 'Faculty',
-          maxHours: faculty.maxHours || 40, // Default max teaching hours per week
-          status: 'available',
-          createdAt: new Date().toISOString()
-        };
-        
-        await databases.createDocument(
-          DB_ID,
-          TEACHERS_COLLECTION,
-          teacherId,
-          facultyData
-        );
-        
-        results.push({
-          name: faculty.name,
-          success: true
-        });
-      } catch (err) {
-        results.push({
-          name: faculty.name,
-          success: false,
-          error: err.message
-        });
-      }
+    if (response.data.success) {
+      return {
+        success: true,
+        results: response.data.results,
+        error: null
+      };
+    } else {
+      return {
+        success: false,
+        results: null,
+        error: response.data.message || 'Failed to import teachers'
+      };
     }
-    
-    return {
-      success: true,
-      results,
-      error: null
-    };
   } catch (error) {
     console.error('Error processing faculty import:', error);
     return {
       success: false,
       results: null,
-      error: error.message || 'Error processing faculty import'
+      error: error.response?.data?.message || 'Failed to import teachers'
     };
   }
 };
 
 /**
- * Generate example JSON faculty dataset for download
- * @returns {Object} Example faculty dataset
+ * Get subject areas from backend API with caching
+ * @returns {Promise<Array>} Array of subject areas
  */
-export const getExampleJSONDataset = () => {
-  return [
-    {
-      "name": "Dr. John Doe",
-      "email": "john.doe@university.edu",
-      "password": "securePassword123",
-      "department": "Computer Science",
-      "expertise": ["Algorithms & Data Structures", "Artificial Intelligence"],
-      "qualification": "Ph.D Computer Science",
-      "experience": 10,
-      "active": true,
-      "maxHours": 40
-    },
-    {
-      "name": "Dr. Jane Smith",
-      "email": "jane.smith@university.edu",
-      "password": "securePassword456",
-      "department": "Electrical Engineering",
-      "expertise": ["Computer Networks", "Embedded Systems"],
-      "qualification": "Ph.D Electrical Engineering",
-      "experience": 8,
-      "active": true,
-      "maxHours": 35
+const getSubjectAreas = async () => {
+  // Return cached data if available
+  if (cachedSubjectAreas) {
+    return cachedSubjectAreas;
+  }
+  
+  try {
+    const response = await axios.get(`${API_URL}/teachers/data/subject-areas`);
+    
+    if (response.data.success) {
+      // Cache the data
+      cachedSubjectAreas = response.data.subjectAreas;
+      return response.data.subjectAreas;
+    } else {
+      // Fallback to hardcoded subject areas
+      return [
+        'Algorithms & Data Structures',
+        'Artificial Intelligence',
+        'Computer Networks',
+        'Database Systems',
+        'Operating Systems',
+        'Software Engineering',
+        'Web Development',
+        'Machine Learning',
+        'Embedded Systems',
+        'Cybersecurity',
+        'Cloud Computing',
+        'Mobile Development',
+        'Computer Architecture',
+        'Theoretical Computer Science',
+        'Graphics & Visualization'
+      ];
     }
-  ];
+  } catch (error) {
+    console.error('Error fetching subject areas:', error);
+    // Fallback to hardcoded subject areas
+    return [
+      'Algorithms & Data Structures',
+      'Artificial Intelligence',
+      'Computer Networks',
+      'Database Systems',
+      'Operating Systems',
+      'Software Engineering',
+      'Web Development',
+      'Machine Learning',
+      'Embedded Systems',
+      'Cybersecurity',
+      'Cloud Computing',
+      'Mobile Development',
+      'Computer Architecture',
+      'Theoretical Computer Science',
+      'Graphics & Visualization'
+    ];
+  }
+};
+
+/**
+ * Get departments from backend API with caching
+ * @returns {Promise<Array>} Array of departments
+ */
+const getDepartments = async () => {
+  // Return cached data if available
+  if (cachedDepartments) {
+    return cachedDepartments;
+  }
+  
+  try {
+    const response = await axios.get(`${API_URL}/teachers/data/departments`);
+    
+    if (response.data.success) {
+      // Cache the data
+      cachedDepartments = response.data.departments;
+      return response.data.departments;
+    } else {
+      // Fallback to hardcoded departments
+      return [
+        'Computer Science', 
+        'Electrical Engineering', 
+        'Mechanical Engineering',
+        'Civil Engineering',
+        'Chemical Engineering'
+      ];
+    }
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    // Fallback to hardcoded departments
+    return [
+      'Computer Science', 
+      'Electrical Engineering', 
+      'Mechanical Engineering',
+      'Civil Engineering',
+      'Chemical Engineering'
+    ];
+  }
+};
+
+/**
+ * Generate example JSON faculty dataset for download
+ * @returns {Promise<Object>} Example faculty dataset
+ */
+const getExampleJSONDataset = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/teachers/data/example-dataset`);
+    
+    if (response.data.success) {
+      return response.data.data;
+    } else {
+      return [
+        {
+          "name": "Dr. John Doe",
+          "email": "john.doe@university.edu",
+          "password": "securePassword123",
+          "department": "Computer Science",
+          "expertise": ["Algorithms & Data Structures", "Artificial Intelligence"],
+          "qualification": "Ph.D Computer Science",
+          "experience": 10,
+          "active": true,
+          "maxHours": 40
+        },
+        {
+          "name": "Dr. Jane Smith",
+          "email": "jane.smith@university.edu",
+          "password": "securePassword456",
+          "department": "Electrical Engineering",
+          "expertise": ["Computer Networks", "Embedded Systems"],
+          "qualification": "Ph.D Electrical Engineering",
+          "experience": 8,
+          "active": true,
+          "maxHours": 35
+        }
+      ];
+    }
+  } catch (error) {
+    console.error('Error fetching example dataset:', error);
+    // Return fallback data
+    return [
+      {
+        "name": "Dr. John Doe",
+        "email": "john.doe@university.edu",
+        "password": "securePassword123",
+        "department": "Computer Science",
+        "expertise": ["Algorithms & Data Structures", "Artificial Intelligence"],
+        "qualification": "Ph.D Computer Science",
+        "experience": 10,
+        "active": true,
+        "maxHours": 40
+      },
+      {
+        "name": "Dr. Jane Smith",
+        "email": "jane.smith@university.edu",
+        "password": "securePassword456",
+        "department": "Electrical Engineering",
+        "expertise": ["Computer Networks", "Embedded Systems"],
+        "qualification": "Ph.D Electrical Engineering",
+        "experience": 8,
+        "active": true,
+        "maxHours": 35
+      }
+    ];
+  }
 };
 
 /**
@@ -331,7 +370,7 @@ export const getExampleJSONDataset = () => {
  * @param {string} name - Full name
  * @returns {string} Initials (up to 2 characters)
  */
-export const getInitials = (name) => {
+const getInitials = (name) => {
   return name
     .split(' ')
     .map(word => word[0])
@@ -345,7 +384,7 @@ export const getInitials = (name) => {
  * @param {string} name - User's name
  * @returns {string} CSS class for background color
  */
-export const getAvatarBg = (name) => {
+const getAvatarBg = (name) => {
   const colors = [
     'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 
     'bg-red-500', 'bg-orange-500', 'bg-amber-500',
@@ -368,8 +407,8 @@ const TeacherManagementService = {
   getExampleJSONDataset,
   getInitials,
   getAvatarBg,
-  subjectAreas,
-  departments,
+  getSubjectAreas,
+  getDepartments,
   dummyTeachers
 };
 
