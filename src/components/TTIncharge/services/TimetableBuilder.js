@@ -90,7 +90,7 @@ export const timeSlots = [
 ];
 
 // Days of the week (reduced for better fit)
-export const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+export const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // Initialize empty timetable data
 export const initializeEmptyTimetable = () => {
