@@ -1,19 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiCalendar, FiSettings, FiUsers, FiInfo, FiArrowRight, FiCheck, FiClock, FiEdit } from 'react-icons/fi';
-
-const dummySemesters = [
-  { id: 1, name: 'Semester 1', status: 'Completed', startDate: '2024-01-15', endDate: '2024-05-15' },
-  { id: 2, name: 'Semester 2', status: 'Completed', startDate: '2024-08-20', endDate: '2024-12-20' },
-  { id: 3, name: 'Semester 3', status: 'Current', startDate: '2025-01-15', endDate: '2025-05-15' },
-];
+import { 
+  getAllSemesters, 
+  getCurrentSemester, 
+  getPastSemesters, 
+  getSemesterById,
+  createNewSemester,
+  cloneSemester,
+  getSemesterStatistics
+} from './services/SettingsSemester';
 
 export default function SettingsSemester() {
+  // UI State
   const [activeTab, setActiveTab] = useState('semester');
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [showNewSemesterModal, setShowNewSemesterModal] = useState(false);
   const [cloneTimetable, setCloneTimetable] = useState(true);
   const [showTooltip, setShowTooltip] = useState(false);
   const [selectedSemester, setSelectedSemester] = useState(null);
+  
+  // Data State
+  const [semesters, setSemesters] = useState([]);
+  const [currentSemester, setCurrentSemester] = useState(null);
+  const [pastSemesters, setPastSemesters] = useState([]);
+  const [semesterStats, setSemesterStats] = useState(null);
   
   // Form state for new semester
   const [newSemester, setNewSemester] = useState({
@@ -22,11 +32,38 @@ export default function SettingsSemester() {
     endDate: ''
   });
 
-  const handleNewSemesterSubmit = (e) => {
+  // Load data on component mount
+  useEffect(() => {
+    setSemesters(getAllSemesters());
+    setCurrentSemester(getCurrentSemester());
+    setPastSemesters(getPastSemesters());
+  }, []);
+  
+  // Load semester statistics when a semester is selected
+  useEffect(() => {
+    if (selectedSemester) {
+      setSemesterStats(getSemesterStatistics(selectedSemester.id));
+    }
+  }, [selectedSemester]);
+
+  const handleNewSemesterSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would create a new semester
-    console.log('Creating new semester:', newSemester);
-    setShowNewSemesterModal(false);
+    try {
+      const result = await createNewSemester({ ...newSemester, cloneTimetable });
+      if (result.success) {
+        // In a real app, you'd refresh the semesters list here
+        setShowNewSemesterModal(false);
+        
+        // Reset form
+        setNewSemester({
+          name: '',
+          startDate: '',
+          endDate: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error creating semester:', error);
+    }
   };
 
   const handleChange = (e) => {
@@ -34,10 +71,20 @@ export default function SettingsSemester() {
     setNewSemester({ ...newSemester, [name]: value });
   };
 
-  const handleCloneSemester = () => {
-    // In a real app, this would clone the semester
-    console.log('Cloning semester with timetable:', cloneTimetable);
-    setShowCloneModal(false);
+  const handleCloneSemester = async () => {
+    try {
+      const result = await cloneSemester(cloneTimetable);
+      if (result.success) {
+        // In a real app, you'd refresh the semesters list here
+        setShowCloneModal(false);
+      }
+    } catch (error) {
+      console.error('Error cloning semester:', error);
+    }
+  };
+
+  const handleSelectSemester = (semester) => {
+    setSelectedSemester(semester);
   };
 
   return (
@@ -184,19 +231,19 @@ export default function SettingsSemester() {
         <div className="space-y-8">
           <div className="bg-white rounded-2xl p-6 shadow-md">
             <h2 className="text-lg font-semibold mb-4">Current Semester</h2>
-            {dummySemesters.filter(sem => sem.status === 'Current').map((sem) => (
-              <div key={sem.id} className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 hover:shadow-md transition">
+            {currentSemester && (
+              <div className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 hover:shadow-md transition">
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-3 h-3 bg-green-500 rounded-full"></span>
-                      <h3 className="font-bold text-xl">{sem.name}</h3>
+                      <h3 className="font-bold text-xl">{currentSemester.name}</h3>
                     </div>
                     <div className="mt-2 flex items-center text-sm text-gray-600 gap-2">
                       <FiClock className="text-gray-400" />
                       <span>
-                        {new Date(sem.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - 
-                        {new Date(sem.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(currentSemester.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - 
+                        {new Date(currentSemester.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
                   </div>
@@ -219,7 +266,7 @@ export default function SettingsSemester() {
                   </div>
                 </div>
               </div>
-            ))}
+            )}
           </div>
           
           <div className="bg-white rounded-2xl p-6 shadow-md">
@@ -229,9 +276,7 @@ export default function SettingsSemester() {
             </div>
             
             <div className="relative border-l-2 border-indigo-300 ml-4">
-              {dummySemesters
-                .filter(sem => sem.status !== 'Current')
-                .map((sem) => (
+              {pastSemesters.map((sem) => (
                 <div key={sem.id} className="mb-6 ml-4">
                   <div className="absolute -left-3 top-1.5 w-6 h-6 rounded-full border-2 border-indigo-500 bg-white"></div>
                   <div className="p-4 bg-white rounded-xl border border-gray-100 hover:shadow-md transition">
@@ -250,7 +295,7 @@ export default function SettingsSemester() {
                     </div>
                     <div className="mt-3 flex justify-end">
                       <button 
-                        onClick={() => setSelectedSemester(sem)}
+                        onClick={() => handleSelectSemester(sem)}
                         className="text-indigo-600 text-sm hover:underline flex items-center gap-1"
                       >
                         View Details
@@ -446,40 +491,42 @@ export default function SettingsSemester() {
               </button>
             </h2>
             
-            <div className="space-y-4">
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-600">Status:</span>
-                <span className="font-medium">{selectedSemester.status}</span>
+            {semesterStats && (
+              <div className="space-y-4">
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-gray-600">Status:</span>
+                  <span className="font-medium">{selectedSemester.status}</span>
+                </div>
+                
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-gray-600">Duration:</span>
+                  <span className="font-medium">
+                    {new Date(selectedSemester.startDate).toLocaleDateString()} - 
+                    {new Date(selectedSemester.endDate).toLocaleDateString()}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-gray-600">Total Courses:</span>
+                  <span className="font-medium">{semesterStats.totalCourses}</span>
+                </div>
+                
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-gray-600">Faculty Assigned:</span>
+                  <span className="font-medium">{semesterStats.facultyAssigned}</span>
+                </div>
+                
+                <div className="flex justify-between border-b pb-2">
+                  <span className="text-gray-600">Rooms Utilized:</span>
+                  <span className="font-medium">{semesterStats.roomsUtilized}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Conflicts Resolved:</span>
+                  <span className="font-medium">{semesterStats.conflictsResolved}</span>
+                </div>
               </div>
-              
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-600">Duration:</span>
-                <span className="font-medium">
-                  {new Date(selectedSemester.startDate).toLocaleDateString()} - 
-                  {new Date(selectedSemester.endDate).toLocaleDateString()}
-                </span>
-              </div>
-              
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-600">Total Courses:</span>
-                <span className="font-medium">32</span>
-              </div>
-              
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-600">Faculty Assigned:</span>
-                <span className="font-medium">28</span>
-              </div>
-              
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-600">Rooms Utilized:</span>
-                <span className="font-medium">18</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">Conflicts Resolved:</span>
-                <span className="font-medium">12/15</span>
-              </div>
-            </div>
+            )}
             
             <div className="flex justify-end gap-4 mt-8">
               <button
