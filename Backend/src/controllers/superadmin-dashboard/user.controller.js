@@ -1,6 +1,6 @@
 // Backend/src/controllers/user.controller.js
 const { validationResult } = require('express-validator');
-const userService = require('../../services/dashboard/user.service');
+const userService = require('../../services/superadmin-dashboard/user.service');
 
 /**
  * Get all users

@@ -1,6 +1,6 @@
 // Backend/src/controllers/dashboard/department.controller.js
 const { validationResult } = require('express-validator');
-const departmentService = require('../../services/dashboard/department.service');
+const departmentService = require('../../services/superadmin-dashboard/department.service');
 
 /**
  * Get all departments
