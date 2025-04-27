@@ -1,6 +1,6 @@
 // Backend/src/controllers/teacher.controller.js
 const { validationResult } = require('express-validator');
-const teacherService = require('../services/teacher.service');
+const teacherService = require('../../services/faculty/teacher.service');
 
 /**
  * Get all teachers

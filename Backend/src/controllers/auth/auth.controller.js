@@ -1,8 +1,8 @@
 // Backend/src/controllers/auth.controller.js
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
-const { auth, db } = require('../config/firebase.config');
-const authService = require('../services/auth.service');
+const { auth, db } = require('../../config/firebase.config');
+const authService = require('../../services/auth/auth.service');
 
 // Login controller
 exports.login = async (req, res) => {

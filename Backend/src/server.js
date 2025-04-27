@@ -6,11 +6,11 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 
-// Import routes
-const authRoutes = require('./routes/auth.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
-const userRoutes = require('./routes/user.routes');
-const teacherRoutes = require('./routes/teacher.routes');
+// Import routes - updated to use new folder structure
+const authRoutes = require('./routes/auth/auth.routes');
+const dashboardRoutes = require('./routes/dashboard/dashboard.routes');
+const userRoutes = require('./routes/user/user.routes');
+const teacherRoutes = require('./routes/faculty/teacher.routes');
 
 // Initialize Express
 const app = express();

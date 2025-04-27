@@ -1,5 +1,5 @@
 // Backend/src/services/dashboard.service.js
-const { db, admin } = require('../config/firebase.config');
+const { db, admin } = require('../../config/firebase.config');
 const axios = require('axios');
 
 // Appwrite SDK setup (using environment variables)

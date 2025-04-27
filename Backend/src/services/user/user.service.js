@@ -1,6 +1,6 @@
 // Backend/src/services/user.service.js
-const { auth, db, admin } = require('../config/firebase.config');
-const { databases, ID, Query } = require('../config/appwrite.config');
+const { auth, db, admin } = require('../../config/firebase.config');
+const { databases, ID, Query } = require('../../config/appwrite.config');
 
 // Appwrite database and collection IDs
 const DB_ID = process.env.APPWRITE_DATABASE_ID || 'default';

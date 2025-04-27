@@ -1,5 +1,5 @@
-// Backend/src/services/auth.service.js
-const { auth, db, admin } = require('../config/firebase.config');
+// Backend/src/services/auth/auth.service.js
+const { auth, db, admin } = require('../../config/firebase.config');
 const axios = require('axios');
 
 /**

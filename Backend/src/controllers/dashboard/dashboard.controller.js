@@ -1,5 +1,5 @@
 // Backend/src/controllers/dashboard.controller.js
-const dashboardService = require('../services/dashboard.service');
+const dashboardService = require('../../services/dashboard/dashboard.service');
 
 /**
  * Get dashboard metrics
