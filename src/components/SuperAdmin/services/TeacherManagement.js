@@ -1,10 +1,27 @@
-// TeacherManagement.js - Updated to integrate with Appwrite
-import { databases, ID, Query } from '../../../appwrite/config';
-import { auth, createUserWithEmailAndPassword } from '../../../firebase/config';
+// TeacherManagement.js - Firebase Integration
+import { 
+  auth, 
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail
+} from '../../../firebase/config.js';
+import { 
+  db, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  limit 
+} from '../../../firebase/config.js';
 
-// Appwrite database and collection IDs
-const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || 'default';
+// Collection names
 const TEACHERS_COLLECTION = 'teachers';
+const PROFILES_COLLECTION = 'profiles';
 
 // Subject areas that teachers can specialize in
 export const subjectAreas = [
@@ -34,7 +51,7 @@ export const departments = [
   'Chemical Engineering'
 ];
 
-// Sample teachers data for fallback if Appwrite fails
+// Sample teachers data for fallback
 export const dummyTeachers = [
   { id: 1, name: 'Dr. Jane Smith', email: 'jane@univ.edu', department: 'Computer Science', expertise: ['Algorithms & Data Structures', 'Artificial Intelligence'], qualification: 'Ph.D Computer Science', experience: 8, active: true },
   { id: 2, name: 'Prof. Michael Johnson', email: 'michael@univ.edu', department: 'Electrical Engineering', expertise: ['Computer Networks', 'Embedded Systems'], qualification: 'Ph.D Electrical Engineering', experience: 12, active: true },
@@ -42,27 +59,28 @@ export const dummyTeachers = [
 ];
 
 /**
- * Fetches all faculty members from Appwrite
- * @returns {Promise} Promise object with faculty data
+ * Fetch all teachers from Firestore database
+ * @returns {Promise<Object>} Object with success status and teachers array
  */
 export const fetchTeachers = async () => {
   try {
-    const response = await databases.listDocuments(
-      DB_ID,
-      TEACHERS_COLLECTION
-    );
+    const teachersRef = collection(db, TEACHERS_COLLECTION);
+    const querySnapshot = await getDocs(teachersRef);
     
-    const teachers = response.documents.map(doc => ({
-      id: doc.$id,
-      name: doc.name,
-      email: doc.email,
-      department: doc.department,
-      expertise: doc.expertise || [],
-      qualification: doc.qualification,
-      experience: doc.experience,
-      active: doc.active,
-      userId: doc.userId
-    }));
+    const teachers = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name,
+        email: data.email,
+        department: data.department,
+        expertise: data.expertise || [],
+        qualification: data.qualification,
+        experience: data.experience || 0,
+        active: data.active !== false, // default to true if not specified
+        userId: data.userId
+      };
+    });
 
     return {
       success: true,
@@ -70,260 +88,284 @@ export const fetchTeachers = async () => {
       error: null
     };
   } catch (error) {
-    console.error('Error fetching teachers from Appwrite:', error);
+    console.error('Error fetching teachers from Firebase:', error);
     return {
       success: false,
-      teachers: dummyTeachers,
+      teachers: [],
       error: 'Failed to load teachers'
     };
   }
 };
 
 /**
- * Create a new teacher using Firebase for auth and Appwrite for data
+ * Create a new teacher using Firebase for auth and data storage
  * @param {Object} teacherData - The teacher data to create
  * @returns {Promise} Promise object with result
  */
 export const createTeacher = async (teacherData) => {
   try {
+    // Generate a random initial password
+    const initialPassword = generateSecurePassword();
+    
     // Create user account in Firebase Auth
-    const { name, email, password } = teacherData;
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const { name, email } = teacherData;
+    const userCredential = await createUserWithEmailAndPassword(auth, email, initialPassword);
     const userId = userCredential.user.uid;
     
-    // Create teacher document in Appwrite
-    const teacherId = ID.unique();
+    // Create teacher document in Firestore
+    const teacherRef = doc(db, TEACHERS_COLLECTION, userId);
     const facultyData = {
       userId,
       name: teacherData.name,
       email: teacherData.email,
       department: teacherData.department,
-      expertise: teacherData.expertise,
-      qualification: teacherData.qualification,
-      experience: parseInt(teacherData.experience),
-      active: teacherData.active,
+      expertise: teacherData.expertise || [],
+      qualification: teacherData.qualification || '',
+      experience: parseInt(teacherData.experience) || 0,
+      active: teacherData.active !== false,
       role: 'Faculty',
       maxHours: 40, // Default max teaching hours per week
       status: 'available',
       createdAt: new Date().toISOString()
     };
     
-    const response = await databases.createDocument(
-      DB_ID,
-      TEACHERS_COLLECTION,
-      teacherId,
-      facultyData
-    );
+    await setDoc(teacherRef, facultyData);
+    
+    // Create a basic user profile document
+    await setDoc(doc(db, PROFILES_COLLECTION, userId), {
+      userId,
+      name: teacherData.name,
+      email: teacherData.email,
+      role: 'Faculty',
+      department: teacherData.department,
+      active: teacherData.active !== false,
+      createdAt: new Date().toISOString()
+    });
+    
+    // Send password reset email so the faculty can set their own password
+    try {
+      await sendPasswordResetEmail(auth, email, {
+        url: window.location.origin + '/login'
+      });
+    } catch (recoveryError) {
+      console.warn('Could not send password reset email:', recoveryError);
+    }
     
     return {
       success: true,
       faculty: {
-        id: response.$id,
+        id: userId,
         ...facultyData
       },
       error: null
     };
   } catch (error) {
-    console.error('Error creating teacher:', error);
+    console.error('Error creating teacher in Firebase:', error);
+    
+    let errorMessage = 'Failed to create faculty account';
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = 'A user with this email already exists';
+    }
+    
     return {
       success: false,
       faculty: null,
-      error: error.message || 'Failed to create teacher'
+      error: errorMessage
     };
   }
 };
 
 /**
- * Update an existing teacher in Appwrite
- * @param {string} id - The teacher ID to update
- * @param {Object} teacherData - The teacher data to update
+ * Update an existing teacher's information
+ * @param {Object} teacherData - Updated teacher data
  * @returns {Promise} Promise object with result
  */
-export const updateTeacher = async (id, teacherData) => {
+export const updateTeacher = async (teacherData) => {
   try {
-    // Password updates should be handled with Firebase Auth
-    if (teacherData.password) {
-      console.log("Password updates should be handled separately with Firebase Auth");
+    const teacherId = teacherData.id;
+    
+    // Update the teacher document in Firestore
+    const teacherRef = doc(db, TEACHERS_COLLECTION, teacherId);
+    const teacherDocSnap = await getDoc(teacherRef);
+    
+    if (!teacherDocSnap.exists()) {
+      throw new Error('Teacher not found');
     }
     
-    // Update teacher document in Appwrite
-    const updatedData = {
+    const updateData = {
       name: teacherData.name,
       department: teacherData.department,
-      expertise: teacherData.expertise,
-      qualification: teacherData.qualification,
-      experience: parseInt(teacherData.experience),
-      active: teacherData.active,
+      expertise: teacherData.expertise || [],
+      qualification: teacherData.qualification || '',
+      experience: parseInt(teacherData.experience) || 0,
+      active: teacherData.active !== false,
       updatedAt: new Date().toISOString()
     };
     
-    const response = await databases.updateDocument(
-      DB_ID,
-      TEACHERS_COLLECTION,
-      id,
-      updatedData
-    );
+    await updateDoc(teacherRef, updateData);
+    
+    // If the teacher record has a userId, update the corresponding profile document
+    const existingData = teacherDocSnap.data();
+    if (existingData.userId) {
+      const profileRef = doc(db, PROFILES_COLLECTION, existingData.userId);
+      const profileSnap = await getDoc(profileRef);
+      
+      if (profileSnap.exists()) {
+        await updateDoc(profileRef, {
+          name: teacherData.name,
+          department: teacherData.department,
+          active: teacherData.active !== false,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
     
     return {
       success: true,
       faculty: {
-        id: response.$id,
-        ...updatedData
+        id: teacherId,
+        ...existingData,
+        ...updateData
       },
       error: null
     };
   } catch (error) {
-    console.error('Error updating teacher in Appwrite:', error);
+    console.error('Error updating teacher in Firebase:', error);
     return {
       success: false,
       faculty: null,
-      error: error.message || 'Failed to update teacher'
+      error: 'Failed to update faculty information'
     };
   }
 };
 
 /**
- * Delete a teacher from Appwrite
- * @param {string} id - The teacher ID to delete
+ * Delete a teacher by ID
+ * @param {string} teacherId - ID of the teacher to delete
  * @returns {Promise} Promise object with result
  */
-export const deleteTeacher = async (id) => {
+export const deleteTeacher = async (teacherId) => {
   try {
-    // Note: This only removes the teacher from Appwrite, not from Firebase Auth
-    await databases.deleteDocument(
-      DB_ID,
-      TEACHERS_COLLECTION,
-      id
-    );
+    // Get the teacher document to check for userId
+    const teacherRef = doc(db, TEACHERS_COLLECTION, teacherId);
+    const teacherSnap = await getDoc(teacherRef);
     
-    return {
-      success: true,
-      error: null
-    };
-  } catch (error) {
-    console.error('Error deleting teacher from Appwrite:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to delete teacher'
-    };
-  }
-};
-
-/**
- * Process faculty bulk import from JSON file using Appwrite
- * @param {Array} jsonData - Array of faculty data from JSON file
- * @returns {Promise} Promise with results of import operation
- */
-export const processFacultyImport = async (jsonData) => {
-  try {
-    // Validate the JSON structure
-    if (!Array.isArray(jsonData)) {
-      throw new Error('Invalid JSON format. Expected an array of faculty members.');
+    if (!teacherSnap.exists()) {
+      throw new Error('Teacher not found');
     }
     
-    // Process each faculty member in the dataset
-    const results = [];
-    for (const faculty of jsonData) {
-      // Basic validation
-      if (!faculty.name || !faculty.email || !faculty.department) {
-        results.push({
-          name: faculty.name || 'Unknown',
-          success: false,
-          error: 'Missing required fields (name, email, or department)'
-        });
-        continue;
+    const teacherData = teacherSnap.data();
+    
+    // Delete the teacher document
+    await deleteDoc(teacherRef);
+    
+    // If there's a userId, delete the profile document and try to delete the Auth user
+    if (teacherData.userId) {
+      // Delete profile document
+      const profileRef = doc(db, PROFILES_COLLECTION, teacherData.userId);
+      const profileSnap = await getDoc(profileRef);
+      
+      if (profileSnap.exists()) {
+        await deleteDoc(profileRef);
       }
       
-      try {
-        // Create user in Firebase Auth
-        const userCredential = await createUserWithEmailAndPassword(
-          auth, 
-          faculty.email, 
-          faculty.password || 'DefaultPass123!'
-        );
-        const userId = userCredential.user.uid;
-        
-        // Create teacher document in Appwrite
-        const teacherId = ID.unique();
-        const facultyData = {
-          userId,
-          name: faculty.name,
-          email: faculty.email,
-          department: faculty.department,
-          expertise: faculty.expertise || [],
-          qualification: faculty.qualification || '',
-          experience: parseInt(faculty.experience) || 0,
-          active: faculty.active !== undefined ? faculty.active : true,
-          role: 'Faculty',
-          maxHours: faculty.maxHours || 40, // Default max teaching hours per week
-          status: 'available',
-          createdAt: new Date().toISOString()
-        };
-        
-        await databases.createDocument(
-          DB_ID,
-          TEACHERS_COLLECTION,
-          teacherId,
-          facultyData
-        );
-        
-        results.push({
-          name: faculty.name,
-          success: true
-        });
-      } catch (err) {
-        results.push({
-          name: faculty.name,
-          success: false,
-          error: err.message
-        });
-      }
+      // Note: Deleting the Firebase Auth user requires the Admin SDK in a Cloud Function
+      // This would be implemented server-side in production
     }
     
     return {
       success: true,
-      results,
       error: null
     };
   } catch (error) {
-    console.error('Error processing faculty import:', error);
+    console.error('Error deleting teacher from Firebase:', error);
     return {
       success: false,
-      results: null,
-      error: error.message || 'Error processing faculty import'
+      error: 'Failed to delete faculty member'
     };
   }
 };
 
 /**
- * Generate example JSON faculty dataset for download
- * @returns {Object} Example faculty dataset
+ * Get a teacher by ID
+ * @param {string} teacherId - ID of the teacher to fetch
+ * @returns {Promise<Object>} Teacher data
  */
-export const getExampleJSONDataset = () => {
-  return [
-    {
-      "name": "Dr. John Doe",
-      "email": "john.doe@university.edu",
-      "password": "securePassword123",
-      "department": "Computer Science",
-      "expertise": ["Algorithms & Data Structures", "Artificial Intelligence"],
-      "qualification": "Ph.D Computer Science",
-      "experience": 10,
-      "active": true,
-      "maxHours": 40
-    },
-    {
-      "name": "Dr. Jane Smith",
-      "email": "jane.smith@university.edu",
-      "password": "securePassword456",
-      "department": "Electrical Engineering",
-      "expertise": ["Computer Networks", "Embedded Systems"],
-      "qualification": "Ph.D Electrical Engineering",
-      "experience": 8,
-      "active": true,
-      "maxHours": 35
+export const getTeacherById = async (teacherId) => {
+  try {
+    const teacherRef = doc(db, TEACHERS_COLLECTION, teacherId);
+    const docSnap = await getDoc(teacherRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        ...data
+      };
+    } else {
+      throw new Error('Teacher not found');
     }
-  ];
+  } catch (error) {
+    console.error('Error fetching teacher:', error);
+    throw error;
+  }
+};
+
+/**
+ * Search teachers by name, department, or expertise
+ * @param {string} searchTerm - Term to search for
+ * @returns {Promise<Array>} Matching teachers
+ */
+export const searchTeachers = async (searchTerm) => {
+  try {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return await fetchTeachers();
+    }
+    
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    const teachersRef = collection(db, TEACHERS_COLLECTION);
+    const querySnapshot = await getDocs(teachersRef);
+    
+    // Client-side filtering since Firestore doesn't support complex text search
+    const filteredTeachers = querySnapshot.docs
+      .map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data
+        };
+      })
+      .filter(teacher => 
+        (teacher.name && teacher.name.toLowerCase().includes(searchTermLower)) ||
+        (teacher.department && teacher.department.toLowerCase().includes(searchTermLower)) ||
+        (teacher.expertise && teacher.expertise.some(exp => 
+          exp.toLowerCase().includes(searchTermLower)
+        ))
+      );
+    
+    return {
+      success: true,
+      teachers: filteredTeachers,
+      error: null
+    };
+  } catch (error) {
+    console.error('Error searching teachers:', error);
+    return {
+      success: false,
+      teachers: [],
+      error: 'Failed to search teachers'
+    };
+  }
+};
+
+// Helper function to generate a secure password
+const generateSecurePassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
 };
 
 /**
@@ -364,8 +406,8 @@ const TeacherManagementService = {
   createTeacher,
   updateTeacher,
   deleteTeacher,
-  processFacultyImport,
-  getExampleJSONDataset,
+  getTeacherById,
+  searchTeachers,
   getInitials,
   getAvatarBg,
   subjectAreas,

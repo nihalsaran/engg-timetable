@@ -20,6 +20,8 @@ import {
     deleteDoc,
     query,
     where,
+    orderBy,
+    limit,
     Timestamp
 } from 'firebase/firestore';
 
@@ -58,6 +60,8 @@ export {
     deleteDoc,
     query,
     where,
+    orderBy,
+    limit,
     Timestamp
 };
 

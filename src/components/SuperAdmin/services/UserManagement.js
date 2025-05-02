@@ -17,11 +17,6 @@ import {
   where,
   generateId
 } from '../../../firebase/config.js';
-import { databases, ID } from '../../../appwrite/config.js';
-
-// Appwrite database and collection IDs
-const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || 'default';
-const TEACHERS_COLLECTION = 'teachers';
 
 // Department data - would come from Database in production
 const departments = [
@@ -40,13 +35,17 @@ const roleDisplayNames = {
   'tt_incharge': 'TT Incharge'
 };
 
+// Collection names
+const PROFILES_COLLECTION = 'profiles';
+const TEACHERS_COLLECTION = 'teachers';
+
 /**
  * Fetch all users from the Firestore database
  * @returns {Promise<Array>} Array of user objects
  */
 export const getUsers = async () => {
   try {
-    const profilesRef = collection(db, 'profiles');
+    const profilesRef = collection(db, PROFILES_COLLECTION);
     const querySnapshot = await getDocs(profilesRef);
     
     return querySnapshot.docs.map(doc => {
@@ -90,6 +89,38 @@ const generateSecurePassword = () => {
 };
 
 /**
+ * Create a teacher record in Firestore for an HOD user
+ * @param {Object} userData User data
+ * @param {String} userId Firebase Auth User ID
+ */
+const createTeacherForHOD = async (userData, userId) => {
+  try {
+    // Generate a unique document ID for the teacher
+    const teacherId = generateId(); // From Firebase config
+
+    // Create teacher document in Firestore 'teachers' collection
+    await setDoc(doc(db, TEACHERS_COLLECTION, teacherId), {
+      userId: userId,
+      name: userData.name,
+      email: userData.email,
+      department: userData.department,
+      role: 'hod', // Set role as HOD
+      expertise: [],
+      qualification: 'PhD', // Default qualification for HOD
+      experience: 0, // Default, can be updated later
+      active: true,
+      maxHours: 20, // Default max teaching hours per week for HOD
+      createdAt: new Date().toISOString()
+    });
+    
+    return teacherId;
+  } catch (error) {
+    console.error('Error creating teacher record for HOD:', error);
+    throw error;
+  }
+};
+
+/**
  * Create a new user in Firebase and add their profile
  * @param {Object} userData User data to create
  * @returns {Promise<Object>} Created user data
@@ -111,7 +142,7 @@ export const createUser = async (userData) => {
     const user = userCredential.user;
     
     // Create user profile in Firestore
-    const userProfileRef = doc(db, 'profiles', user.uid);
+    const userProfileRef = doc(db, PROFILES_COLLECTION, user.uid);
     await setDoc(userProfileRef, {
       userId: user.uid,
       name: userData.name,
@@ -122,7 +153,7 @@ export const createUser = async (userData) => {
       createdAt: new Date().toISOString()
     });
     
-    // If user is an HOD, also create entry in teachers collection in Appwrite
+    // If user is an HOD, also create entry in teachers collection in Firestore
     if (userData.role === 'hod') {
       await createTeacherForHOD(userData, user.uid);
     }
@@ -162,7 +193,7 @@ export const createUser = async (userData) => {
 export const updateUser = async (id, userData) => {
   try {
     // Update user profile in Firestore
-    const userProfileRef = doc(db, 'profiles', id);
+    const userProfileRef = doc(db, PROFILES_COLLECTION, id);
     await updateDoc(userProfileRef, {
       name: userData.name,
       email: userData.email,
@@ -174,36 +205,29 @@ export const updateUser = async (id, userData) => {
     // If the user is an HOD, update or create their record in the teachers collection
     if (userData.role === 'hod') {
       try {
-        // Try to find if this user already has a teacher record in Appwrite
-        const teacherQuery = await databases.listDocuments(
-          DB_ID,
-          TEACHERS_COLLECTION,
-          [Query.equal('userId', id)]
-        );
+        // Try to find if this user already has a teacher record in Firestore
+        const teachersRef = collection(db, TEACHERS_COLLECTION);
+        const q = query(teachersRef, where('userId', '==', id));
+        const querySnapshot = await getDocs(q);
         
         // If a record exists, update it
-        if (teacherQuery.documents && teacherQuery.documents.length > 0) {
-          const teacherId = teacherQuery.documents[0].$id;
+        if (!querySnapshot.empty) {
+          const teacherDoc = querySnapshot.docs[0];
           
-          await databases.updateDocument(
-            DB_ID,
-            TEACHERS_COLLECTION,
-            teacherId,
-            {
-              name: userData.name,
-              email: userData.email,
-              department: userData.department,
-              active: userData.active !== false,
-              updatedAt: new Date().toISOString()
-            }
-          );
+          await updateDoc(doc(db, TEACHERS_COLLECTION, teacherDoc.id), {
+            name: userData.name,
+            email: userData.email,
+            department: userData.department,
+            active: userData.active !== false,
+            updatedAt: new Date().toISOString()
+          });
         } else {
           // If no record exists, create one
           await createTeacherForHOD(userData, id);
         }
-      } catch (appwriteError) {
-        console.error('Error updating HOD in teachers collection:', appwriteError);
-        // Continue with the user update even if the Appwrite operation fails
+      } catch (firestoreError) {
+        console.error('Error updating HOD in teachers collection:', firestoreError);
+        // Continue with the user update even if the Firestore operation fails
       }
     }
     
@@ -220,55 +244,27 @@ export const updateUser = async (id, userData) => {
 
 /**
  * Delete a user from the database
- * @param {string} id The profile document ID
- * @returns {Promise<{success: boolean, id: string}>}
+ * @param {string} id The user's document ID
+ * @returns {Promise<boolean>} Success status
  */
 export const deleteUser = async (id) => {
   try {
+    // In production, you would delete the Firebase Auth user using the Admin SDK in a Cloud Function
+    
     // Delete user profile from Firestore
-    const userProfileRef = doc(db, 'profiles', id);
-    const userSnap = await getDoc(userProfileRef);
-    const userData = userSnap.data();
+    await deleteDoc(doc(db, PROFILES_COLLECTION, id));
     
-    await deleteDoc(userProfileRef);
+    // Check if user has a teacher record and delete it if exists
+    const teachersRef = collection(db, TEACHERS_COLLECTION);
+    const q = query(teachersRef, where('userId', '==', id));
+    const querySnapshot = await getDocs(q);
     
-    // If the user was an HOD, also delete the corresponding teacher record in Appwrite
-    if (userData && userData.role === 'hod') {
-      try {
-        // Find the teacher record in Appwrite
-        const teacherQuery = await databases.listDocuments(
-          DB_ID,
-          TEACHERS_COLLECTION,
-          [Query.equal('userId', id)]
-        );
-        
-        // Delete the teacher record if found
-        if (teacherQuery.documents && teacherQuery.documents.length > 0) {
-          const teacherId = teacherQuery.documents[0].$id;
-          await databases.deleteDocument(
-            DB_ID,
-            TEACHERS_COLLECTION,
-            teacherId
-          );
-          console.log('HOD deleted from teachers collection:', teacherId);
-        }
-      } catch (appwriteError) {
-        console.error('Error deleting HOD from teachers collection:', appwriteError);
-        // Continue with the user deletion even if the Appwrite operation fails
-      }
+    if (!querySnapshot.empty) {
+      const teacherDoc = querySnapshot.docs[0];
+      await deleteDoc(doc(db, TEACHERS_COLLECTION, teacherDoc.id));
     }
     
-    // In a real application, you would use Firebase Admin SDK
-    // to delete the user from Firebase Authentication
-    // This requires server-side code (Cloud Functions)
-    try {
-      // This is a placeholder - in production, you would call a Cloud Function
-      console.log('User account deletion should be handled by server');
-    } catch (authError) {
-      console.warn('Could not delete auth account (requires admin privileges):', authError);
-    }
-    
-    return { success: true, id };
+    return true;
   } catch (error) {
     console.error('Error deleting user:', error);
     throw new Error('Failed to delete user: ' + error.message);
@@ -276,42 +272,59 @@ export const deleteUser = async (id) => {
 };
 
 /**
- * Send a password reset email to a user
- * @param {string} email User's email
- * @returns {Promise<{success: boolean}>}
+ * Get a single user by ID
+ * @param {string} id User ID
+ * @returns {Promise<Object>} User data
  */
-export const sendPasswordReset = async (email) => {
+export const getUserById = async (id) => {
   try {
-    // Send password reset email
-    await sendPasswordResetEmail(auth, email, {
-      url: window.location.origin + '/login'
-    });
+    const userRef = doc(db, PROFILES_COLLECTION, id);
+    const docSnap = await getDoc(userRef);
     
-    return { success: true };
-  } catch (error) {
-    console.error('Error sending password reset:', error);
-    
-    if (error.code === 'auth/user-not-found') {
-      throw new Error('No user found with this email address.');
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        id: docSnap.id,
+        ...data
+      };
+    } else {
+      throw new Error('User not found');
     }
-    
-    throw new Error('Failed to send password reset: ' + error.message);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    throw error;
   }
 };
 
 /**
  * Toggle a user's active status
- * @param {string} id The profile document ID
- * @param {boolean} isActive New active status
- * @returns {Promise<{success: boolean}>}
+ * @param {string} id The user's document ID
+ * @param {boolean} active New active status 
+ * @returns {Promise<boolean>} Success status
  */
-export const toggleUserStatus = async (id, isActive) => {
+export const toggleUserStatus = async (id, active) => {
   try {
-    const userProfileRef = doc(db, 'profiles', id);
+    // Update user profile in Firestore
+    const userProfileRef = doc(db, PROFILES_COLLECTION, id);
     await updateDoc(userProfileRef, {
-      active: isActive
+      active: active,
+      updatedAt: new Date().toISOString()
     });
-    return { success: true };
+    
+    // Also update teacher record if exists
+    const teachersRef = collection(db, TEACHERS_COLLECTION);
+    const q = query(teachersRef, where('userId', '==', id));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const teacherDoc = querySnapshot.docs[0];
+      await updateDoc(doc(db, TEACHERS_COLLECTION, teacherDoc.id), {
+        active: active,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    
+    return true;
   } catch (error) {
     console.error('Error toggling user status:', error);
     throw new Error('Failed to update user status: ' + error.message);
@@ -319,53 +332,75 @@ export const toggleUserStatus = async (id, isActive) => {
 };
 
 /**
- * Get user initials from full name
- * @param {string} name Full name
- * @returns {string} Initials (up to two characters)
+ * Send a password reset email to a user
+ * @param {string} email User's email address
+ * @returns {Promise<boolean>} Success status
  */
-export const getInitials = (name) => {
-  if (!name) return '';
-  const parts = name.trim().split(' ');
-  if (parts.length === 1) {
-    return parts[0].charAt(0).toUpperCase();
+export const sendPasswordReset = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email, {
+      url: window.location.origin + '/login'
+    });
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset:', error);
+    throw new Error('Failed to send password reset email: ' + error.message);
   }
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
 
 /**
- * Get a color for user avatar background based on name
+ * Generate initials from a name
+ * @param {string} name Full name
+ * @returns {string} Initials (up to 2 characters)
+ */
+export const getInitials = (name) => {
+  if (!name) return '';
+  
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+};
+
+/**
+ * Generate a background color class based on name
  * @param {string} name User's name
- * @returns {string} CSS class name for background color
+ * @returns {string} CSS class for background color
  */
 export const getAvatarBg = (name) => {
   if (!name) return 'bg-gray-400';
   
-  // Simple hash function to ensure consistent colors
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  // Color options
   const colors = [
-    'bg-indigo-500',
+    'bg-teal-500',
     'bg-blue-500',
+    'bg-indigo-500',
     'bg-purple-500',
-    'bg-green-500',
-    'bg-red-500',
-    'bg-yellow-500',
     'bg-pink-500',
-    'bg-teal-500'
+    'bg-red-500',
+    'bg-orange-500',
+    'bg-amber-500',
+    'bg-yellow-500',
+    'bg-lime-500',
+    'bg-green-500',
+    'bg-emerald-500',
+    'bg-cyan-500',
+    'bg-sky-500',
+    'bg-violet-500',
+    'bg-fuchsia-500',
+    'bg-rose-500'
   ];
   
-  // Get color based on hash
-  return colors[Math.abs(hash) % colors.length];
+  // Create a simple hash from the name to get consistent colors
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
 };
 
 /**
- * Get a color for role badge based on role
+ * Get role badge color based on user role
  * @param {string} role User role
- * @returns {string} CSS class name for badge color
+ * @returns {string} CSS class for badge color
  */
 export const getRoleBadgeColor = (role) => {
   switch (role) {
@@ -377,46 +412,5 @@ export const getRoleBadgeColor = (role) => {
       return 'bg-green-100 text-green-800';
     default:
       return 'bg-gray-100 text-gray-800';
-  }
-};
-
-/**
- * Create a teacher record in Appwrite for HOD users
- * @param {Object} userData User data to create teacher record
- * @param {string} userId Firebase user ID
- * @returns {Promise<Object>} Created teacher data
- */
-const createTeacherForHOD = async (userData, userId) => {
-  try {
-    // Create teacher document in Appwrite
-    const teacherId = ID.unique();
-    const teacherData = {
-      userId: userId,
-      name: userData.name,
-      email: userData.email,
-      department: userData.department,
-      expertise: [], // Default empty expertise array
-      qualification: 'HOD', // Default qualification
-      experience: 0, // Default experience
-      active: userData.active !== false,
-      role: 'HOD', // Mark as HOD
-      maxHours: 20, // Default max teaching hours for HOD
-      status: 'available',
-      canBeHOD: true, // Flag to indicate this person can be HOD
-      createdAt: new Date().toISOString()
-    };
-    
-    const response = await databases.createDocument(
-      DB_ID,
-      TEACHERS_COLLECTION,
-      teacherId,
-      teacherData
-    );
-    
-    console.log('HOD added to teachers collection:', response.$id);
-    return response;
-  } catch (error) {
-    console.error('Error adding HOD to teachers collection:', error);
-    throw error;
   }
 };

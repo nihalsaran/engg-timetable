@@ -1,8 +1,20 @@
-// RoomManagement.js - Updated to integrate with Appwrite
-import { databases, ID, Query } from '../../../appwrite/config';
+// RoomManagement.js - Firebase Integration
+import { 
+  db, 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy,
+  generateId
+} from '../../../firebase/config';
 
-// Appwrite database and collection IDs
-const DB_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID || 'default';
+// Collection name
 const ROOMS_COLLECTION = 'rooms';
 
 // Mock data for rooms
@@ -156,8 +168,9 @@ export const filterRooms = (rooms, filters = {}) => {
   return rooms.filter(room => {
     // Filter by search term
     if (filters.searchTerm && 
-        !room.roomNumber.toLowerCase().includes(filters.searchTerm.toLowerCase()) && 
-        !room.faculty.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+        !room.roomNumber?.toLowerCase().includes(filters.searchTerm.toLowerCase()) && 
+        !room.number?.toLowerCase().includes(filters.searchTerm.toLowerCase()) && 
+        !room.faculty?.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
       return false;
     }
     
@@ -167,7 +180,7 @@ export const filterRooms = (rooms, filters = {}) => {
     }
     
     // Filter by feature
-    if (filters.feature && !room.features.includes(filters.feature)) {
+    if (filters.feature && !room.features?.includes(filters.feature)) {
       return false;
     }
     
@@ -223,7 +236,7 @@ export const processRoomImport = async (jsonData) => {
           continue;
         }
         
-        // Add room using the Appwrite function
+        // Add room using the Firebase function
         const room = await createRoom({
           number: roomData.roomNumber,
           capacity: roomData.capacity,
@@ -258,28 +271,35 @@ export const processRoomImport = async (jsonData) => {
 };
 
 /**
- * Get all rooms from Appwrite
+ * Get all rooms from Firebase
  * @returns {Promise} Promise object with rooms data
  */
 export const getAllRooms = async () => {
   try {
-    const response = await databases.listDocuments(
-      DB_ID,
-      ROOMS_COLLECTION
-    );
+    const roomsRef = collection(db, ROOMS_COLLECTION);
+    const querySnapshot = await getDocs(roomsRef);
     
-    // Transform Appwrite data format to match application needs
-    return response.documents.map(room => ({
-      id: room.$id,
-      number: room.number,
-      type: room.type,
-      capacity: room.capacity,
-      building: room.building,
-      floor: room.floor,
-      status: room.status || 'Available',
-      faculty: room.faculty,
-      features: room.features || []
-    }));
+    if (querySnapshot.empty) {
+      console.warn("No rooms found in Firebase, using dummy data");
+      return dummyRooms;
+    }
+    
+    // Transform Firebase data format to match application needs
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        roomNumber: data.number, // for backward compatibility
+        number: data.number,
+        type: data.type,
+        capacity: data.capacity,
+        building: data.building,
+        floor: data.floor,
+        status: data.status || 'Available',
+        faculty: data.faculty,
+        features: data.features || []
+      };
+    });
   } catch (error) {
     console.error("Error fetching rooms:", error);
     // Fallback to dummy data
@@ -288,7 +308,7 @@ export const getAllRooms = async () => {
 };
 
 /**
- * Filter rooms by search term and filters using Appwrite
+ * Filter rooms by search term and filters using Firebase
  * @param {string} searchTerm - Search term for filtering rooms
  * @param {Object} filters - Additional filters to apply
  * @returns {Promise} Promise object with filtered rooms
@@ -296,13 +316,13 @@ export const getAllRooms = async () => {
 export const filterRoomsAsync = async (searchTerm, filters = {}) => {
   try {
     // Get all rooms first and then filter client-side
-    // In a real app with many rooms, this would use Appwrite's query filters
+    // In a real app with many rooms, you might use Firestore queries more specifically
     const allRooms = await getAllRooms();
     
     return allRooms.filter(room => {
       // Filter by search term
       if (searchTerm && !room.number.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !room.building.toLowerCase().includes(searchTerm.toLowerCase())) {
+          !room.building?.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
       
@@ -333,22 +353,8 @@ export const filterRoomsAsync = async (searchTerm, filters = {}) => {
     
     // Fallback to filtering dummy data
     return dummyRooms.filter(room => {
-      // Filter by search term
-      if (searchTerm && !room.number.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          !room.building.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      
-      // Apply other filters
-      if (filters.building && filters.building !== 'All' && room.building !== filters.building) {
-        return false;
-      }
-      
-      if (filters.type && filters.type !== 'All' && room.type !== filters.type) {
-        return false;
-      }
-      
-      if (filters.status && filters.status !== 'All' && room.status !== filters.status) {
+      // Apply filters to dummy data
+      if (searchTerm && !room.roomNumber.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
       
@@ -362,15 +368,18 @@ export const filterRoomsAsync = async (searchTerm, filters = {}) => {
 };
 
 /**
- * Create a new room in Appwrite
+ * Create a new room in Firebase
  * @param {Object} roomData - Room data to create
  * @returns {Promise} Promise object with created room
  */
 export const createRoom = async (roomData) => {
   try {
-    const roomId = ID.unique();
+    // Generate a unique ID for the room
+    const roomId = generateId();
+    
+    // Prepare room data
     const room = {
-      number: roomData.number,
+      number: roomData.number || roomData.roomNumber,
       type: roomData.type || 'Classroom',
       capacity: parseInt(roomData.capacity),
       building: roomData.building || 'Main Block',
@@ -382,36 +391,29 @@ export const createRoom = async (roomData) => {
       updatedAt: new Date().toISOString()
     };
     
-    const response = await databases.createDocument(
-      DB_ID,
-      ROOMS_COLLECTION,
-      roomId,
-      room
-    );
+    // Add the document to Firestore
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId);
+    await setDoc(roomRef, room);
     
     return {
-      id: response.$id,
+      id: roomId,
       ...room
     };
   } catch (error) {
     console.error("Error creating room:", error);
-    // For UI continuity in case of error
-    return {
-      id: 'temp-' + Date.now(),
-      ...roomData
-    };
+    throw error;
   }
 };
 
 /**
- * Update an existing room in Appwrite
+ * Update an existing room in Firebase
  * @param {Object} roomData - Room data to update
  * @returns {Promise} Promise object with updated room
  */
 export const updateRoom = async (roomData) => {
   try {
     const updatedData = {
-      number: roomData.number,
+      number: roomData.number || roomData.roomNumber,
       type: roomData.type || 'Classroom',
       capacity: parseInt(roomData.capacity),
       building: roomData.building || 'Main Block',
@@ -422,33 +424,28 @@ export const updateRoom = async (roomData) => {
       updatedAt: new Date().toISOString()
     };
     
-    await databases.updateDocument(
-      DB_ID,
-      ROOMS_COLLECTION,
-      roomData.id,
-      updatedData
-    );
+    const roomRef = doc(db, ROOMS_COLLECTION, roomData.id);
+    await updateDoc(roomRef, updatedData);
     
-    return roomData;
+    return {
+      id: roomData.id,
+      ...updatedData
+    };
   } catch (error) {
     console.error("Error updating room:", error);
-    // Return the data anyway for UI continuity
-    return roomData;
+    throw error;
   }
 };
 
 /**
- * Delete a room from Appwrite
+ * Delete a room from Firebase
  * @param {string} id - ID of the room to delete
  * @returns {Promise} Promise object with result
  */
 export const deleteRoom = async (id) => {
   try {
-    await databases.deleteDocument(
-      DB_ID,
-      ROOMS_COLLECTION,
-      id
-    );
+    const roomRef = doc(db, ROOMS_COLLECTION, id);
+    await deleteDoc(roomRef);
     
     return { success: true, id };
   } catch (error) {
