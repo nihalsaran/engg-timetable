@@ -82,14 +82,14 @@ export const roomsData = [
   { id: 'D101', capacity: 80, type: 'Lecture Hall', facilities: ['Projector', 'Smart Board', 'Audio System'] },
 ];
 
-// Time slots
+// Time slots (reduced for better fit)
 export const timeSlots = [
-  '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
-  '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00',
-  '16:00 - 17:00', '17:00 - 18:00'
+  '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
+  '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', 
+  '15:00 - 16:00', '16:00 - 17:00'
 ];
 
-// Days of the week
+// Days of the week (reduced for better fit)
 export const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // Initialize empty timetable data
@@ -206,4 +206,111 @@ export const filterCourses = (courses, { selectedSemester, selectedDepartment, s
     if (selectedFaculty && course.faculty.id !== selectedFaculty.id) return false;
     return true;
   });
+};
+
+// Get compact hour format for display
+export const getCompactTimeFormat = (timeSlot) => {
+  const parts = timeSlot.split(' - ');
+  if (parts.length !== 2) return timeSlot;
+  
+  const start = parts[0].substring(0, 5);
+  const end = parts[1].substring(0, 5);
+  return `${start}-${end}`;
+};
+
+// Get abbreviated day name
+export const getAbbreviatedDay = (day) => {
+  return day.substring(0, 3);
+};
+
+// Get compacted cell height based on view mode
+export const getCellHeight = (viewMode) => {
+  return viewMode === 'week' ? 'h-14' : 'h-20';
+};
+
+// Optimize display for smaller screens
+export const getResponsiveClasses = (isMobile) => {
+  return {
+    courseBlockWidth: isMobile ? 'w-40' : 'w-52',
+    roomSelectionWidth: isMobile ? 'w-44' : 'w-56',
+    gapSize: isMobile ? 'gap-1' : 'gap-3',
+    fontSize: isMobile ? 'text-xs' : 'text-sm',
+    padding: isMobile ? 'p-2' : 'p-4'
+  };
+};
+
+// Get compact display of course details based on available space
+export const getCompactCourseDisplay = (course, isCompact) => {
+  if (isCompact) {
+    return {
+      title: course.id,
+      subtitle: course.faculty.name.split(' ')[1], // Just the last name
+      room: course.room
+    };
+  }
+  
+  return {
+    title: `${course.id}: ${course.name}`,
+    subtitle: course.faculty.name,
+    room: `Room: ${course.room}`
+  };
+};
+
+// Additional business logic functions moved from TimetableBuilder.jsx
+
+// Delete course from timetable
+export const deleteCourse = (timetableData, day, slot) => {
+  const newTimetable = JSON.parse(JSON.stringify(timetableData));
+  newTimetable[day][slot] = null;
+  return newTimetable;
+};
+
+// Update timetable on course drop
+export const updateTimetableOnDrop = (timetableData, day, slot, course, selectedRoom, dragSourceInfo) => {
+  const newTimetable = JSON.parse(JSON.stringify(timetableData));
+  
+  // If this is a re-drag from another cell, remove the course from its original position
+  if (dragSourceInfo) {
+    newTimetable[dragSourceInfo.day][dragSourceInfo.slot] = null;
+  }
+  
+  // Add the course to the timetable
+  newTimetable[day][slot] = {
+    ...course,
+    room: selectedRoom.id
+  };
+  
+  return newTimetable;
+};
+
+// Filter conflicts when a course is deleted
+export const filterConflictsAfterDeletion = (conflicts, day, slot) => {
+  return conflicts.filter(
+    conflict => !(conflict.day === day && conflict.slot === slot)
+  );
+};
+
+// Filter conflicts related to the source position when moving a course
+export const filterConflictsAfterMove = (conflicts, sourceDay, sourceSlot) => {
+  return conflicts.filter(
+    c => !(c.day === sourceDay && c.slot === sourceSlot)
+  );
+};
+
+// Create a tab object
+export const createTab = (id, name, isActive = true) => {
+  return { id, name, isActive };
+};
+
+// Update tabs state when switching tabs
+export const updateTabsOnSwitch = (tabs, targetTabId) => {
+  return tabs.map(tab => ({ 
+    ...tab, 
+    isActive: tab.id === targetTabId 
+  }));
+};
+
+// Create a deep copy of a timetable or any object
+export const deepCopy = (obj) => {
+  return JSON.parse(JSON.stringify(obj));
 };
