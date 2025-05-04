@@ -13,6 +13,13 @@ import {
   serverTimestamp 
 } from '../../../firebase/config.js';
 
+// Import centralized semester service
+import { 
+  getAllSemesters, 
+  getDefaultSemesters, 
+  getActiveSemester 
+} from '../../../services/SemesterService.js';
+
 // Constant time slots and weekdays
 export const timeSlots = [
   '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
@@ -22,9 +29,11 @@ export const timeSlots = [
 
 export const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-// Add departments and semesters exports to fix the error
+// Add departments export to fix the error
 export const departments = ['Computer Science', 'Mechanical Engineering', 'Electrical Engineering', 'Civil Engineering'];
-export const semesters = ['Semester 7', 'Semester 6', 'Semester 5'];
+
+// Add this line to maintain backward compatibility with existing code
+export const semesters = ['Semester 7', 'Semester 6', 'Semester 5', 'Semester 4'];
 
 // Collection references
 const TIMETABLE_COLLECTION = 'timetables';
@@ -56,23 +65,37 @@ export const fetchDepartments = async () => {
 };
 
 /**
- * Fetch semesters from Firebase
+ * Fetch semesters from Firebase using centralized service
  * @returns {Promise<Array>} - Array of semester names
  */
 export const fetchSemesters = async () => {
   try {
-    const semestersRef = collection(db, SEMESTER_COLLECTION);
-    const snapshot = await getDocs(semestersRef);
+    // Get all semesters using the centralized service
+    const semestersData = await getAllSemesters();
     
-    if (snapshot.empty) {
-      // Fallback to default semesters
-      return ['Semester 7', 'Semester 6', 'Semester 5'];
+    if (semestersData.length === 0) {
+      // Fallback to default semesters if none found
+      return getDefaultSemesters();
     }
     
-    return snapshot.docs.map(doc => doc.data().name);
+    return semestersData.map(sem => sem.name);
   } catch (error) {
     console.error('Error fetching semesters:', error);
-    return ['Semester 7', 'Semester 6', 'Semester 5'];
+    return getDefaultSemesters();
+  }
+};
+
+/**
+ * Get active semester from centralized service
+ * @returns {Promise<string>} - Active semester name
+ */
+export const getActiveCurrentSemester = async () => {
+  try {
+    const activeSem = await getActiveSemester();
+    return activeSem ? activeSem.name : getDefaultSemesters()[0];
+  } catch (error) {
+    console.error('Error getting active semester:', error);
+    return getDefaultSemesters()[0];
   }
 };
 

@@ -27,7 +27,8 @@ import {
     onSnapshot,
     serverTimestamp,
     arrayRemove,
-    arrayUnion
+    arrayUnion,
+    writeBatch
 } from 'firebase/firestore';
 
 // Firebase configuration using environment variables
@@ -72,7 +73,8 @@ export {
     onSnapshot,
     serverTimestamp,
     arrayRemove,
-    arrayUnion
+    arrayUnion,
+    writeBatch
 };
 
 // Helper function to generate unique IDs (similar to Appwrite's ID.unique())
