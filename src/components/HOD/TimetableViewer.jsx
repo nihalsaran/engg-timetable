@@ -366,7 +366,7 @@ export default function TimetableViewer() {
       </div>
       
       {/* Print stylesheet - only applied when printing */}
-      <style jsx>{`
+      <style>{`
         @media print {
           body * {
             visibility: hidden;

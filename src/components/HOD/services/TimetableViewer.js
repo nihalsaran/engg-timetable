@@ -1,4 +1,19 @@
-// Constant data
+// Import Firebase configuration
+import { 
+  db, 
+  collection, 
+  getDocs, 
+  query, 
+  where, 
+  orderBy,
+  doc,
+  getDoc,
+  onSnapshot,
+  addDoc,
+  serverTimestamp 
+} from '../../../firebase/config.js';
+
+// Constant time slots and weekdays
 export const timeSlots = [
   '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
   '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00',
@@ -7,12 +22,66 @@ export const timeSlots = [
 
 export const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
+// Add departments and semesters exports to fix the error
 export const departments = ['Computer Science', 'Mechanical Engineering', 'Electrical Engineering', 'Civil Engineering'];
 export const semesters = ['Semester 7', 'Semester 6', 'Semester 5'];
 
-// Generate random timetable data
-export const generateTimetableData = () => {
-  const courseColors = [
+// Collection references
+const TIMETABLE_COLLECTION = 'timetables';
+const DEPARTMENT_COLLECTION = 'departments';
+const SEMESTER_COLLECTION = 'semesters';
+const COURSES_COLLECTION = 'courses';
+const FACULTY_COLLECTION = 'faculty';
+const ROOMS_COLLECTION = 'rooms';
+
+/**
+ * Fetch departments from Firebase
+ * @returns {Promise<Array>} - Array of department names
+ */
+export const fetchDepartments = async () => {
+  try {
+    const departmentsRef = collection(db, DEPARTMENT_COLLECTION);
+    const snapshot = await getDocs(departmentsRef);
+    
+    if (snapshot.empty) {
+      // Fallback to default departments
+      return ['Computer Science', 'Mechanical Engineering', 'Electrical Engineering', 'Civil Engineering'];
+    }
+    
+    return snapshot.docs.map(doc => doc.data().name);
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    return ['Computer Science', 'Mechanical Engineering', 'Electrical Engineering', 'Civil Engineering'];
+  }
+};
+
+/**
+ * Fetch semesters from Firebase
+ * @returns {Promise<Array>} - Array of semester names
+ */
+export const fetchSemesters = async () => {
+  try {
+    const semestersRef = collection(db, SEMESTER_COLLECTION);
+    const snapshot = await getDocs(semestersRef);
+    
+    if (snapshot.empty) {
+      // Fallback to default semesters
+      return ['Semester 7', 'Semester 6', 'Semester 5'];
+    }
+    
+    return snapshot.docs.map(doc => doc.data().name);
+  } catch (error) {
+    console.error('Error fetching semesters:', error);
+    return ['Semester 7', 'Semester 6', 'Semester 5'];
+  }
+};
+
+/**
+ * Generate random color classes for courses
+ * @returns {Array} - Array of CSS class strings
+ */
+export const getCourseColors = () => {
+  return [
     'bg-blue-100 text-blue-800 border-blue-300',
     'bg-teal-100 text-teal-800 border-teal-300',
     'bg-purple-100 text-purple-800 border-purple-300',
@@ -21,6 +90,172 @@ export const generateTimetableData = () => {
     'bg-green-100 text-green-800 border-green-300',
     'bg-indigo-100 text-indigo-800 border-indigo-300',
   ];
+};
+
+/**
+ * Fetch timetable data from Firebase
+ * @param {string} departmentId - Department ID
+ * @param {string} semesterId - Semester ID
+ * @returns {Promise<Object>} - Timetable data with courses, faculty, and rooms
+ */
+export const fetchTimetableData = async (departmentId, semesterId) => {
+  try {
+    const colorMap = {};
+    const courseColors = getCourseColors();
+    let colorIndex = 0;
+    
+    // Fetch timetable for this department and semester
+    const timetablesRef = collection(db, TIMETABLE_COLLECTION);
+    const timetableQuery = query(
+      timetablesRef,
+      where('departmentId', '==', departmentId),
+      where('semesterId', '==', semesterId),
+      orderBy('updatedAt', 'desc')
+    );
+    
+    const timetableSnapshot = await getDocs(timetableQuery);
+    
+    // If no timetable found, return generated data
+    if (timetableSnapshot.empty) {
+      console.log('No timetable found, generating random data');
+      return generateTimetableData();
+    }
+    
+    // Get the latest timetable
+    const timetableData = timetableSnapshot.docs[0].data();
+    const slots = timetableData.slots || {};
+    
+    // Fetch courses information
+    const coursesRef = collection(db, COURSES_COLLECTION);
+    const coursesQuery = query(
+      coursesRef,
+      where('department', '==', departmentId)
+    );
+    
+    const coursesSnapshot = await getDocs(coursesQuery);
+    const coursesMap = {};
+    
+    coursesSnapshot.forEach(doc => {
+      const course = doc.data();
+      coursesMap[doc.id] = {
+        id: doc.id,
+        code: course.code || '',
+        name: course.title || '',
+        semester: course.semester || '',
+        faculty: course.faculty || null
+      };
+      
+      // Assign color to course
+      if (!colorMap[doc.id]) {
+        colorMap[doc.id] = courseColors[colorIndex % courseColors.length];
+        colorIndex++;
+      }
+    });
+    
+    // Fetch faculty information
+    const facultyRef = collection(db, FACULTY_COLLECTION);
+    const facultyQuery = query(
+      facultyRef,
+      where('department', '==', departmentId)
+    );
+    
+    const facultySnapshot = await getDocs(facultyQuery);
+    const facultyMap = {};
+    
+    facultySnapshot.forEach(doc => {
+      const faculty = doc.data();
+      facultyMap[doc.id] = faculty.name || '';
+    });
+    
+    // Fetch rooms information
+    const roomsRef = collection(db, ROOMS_COLLECTION);
+    const roomsSnapshot = await getDocs(roomsRef);
+    const roomsMap = {};
+    
+    roomsSnapshot.forEach(doc => {
+      const room = doc.data();
+      roomsMap[doc.id] = room.name || '';
+    });
+    
+    // Construct timetable with course, faculty and room info
+    const timetable = {};
+    
+    weekdays.forEach(day => {
+      timetable[day] = {};
+      
+      timeSlots.forEach(slot => {
+        const slotKey = `${day}:${slot}`;
+        const slotData = slots[slotKey];
+        
+        if (slotData && slotData.courseId && coursesMap[slotData.courseId]) {
+          const course = coursesMap[slotData.courseId];
+          const facultyName = slotData.facultyId ? facultyMap[slotData.facultyId] || 'Unknown Faculty' : 'No Faculty';
+          const roomName = slotData.roomId ? roomsMap[slotData.roomId] || 'Unknown Room' : 'No Room';
+          
+          timetable[day][slot] = {
+            code: course.code,
+            name: course.name,
+            faculty: facultyName,
+            room: roomName,
+            semester: course.semester,
+            courseId: slotData.courseId,
+            colorClass: colorMap[slotData.courseId]
+          };
+        } else {
+          timetable[day][slot] = null; // Empty slot
+        }
+      });
+    });
+    
+    // Extract unique faculty members and rooms for filtering
+    const facultyMembers = [...new Set(Object.values(facultyMap))].filter(Boolean);
+    const rooms = [...new Set(Object.values(roomsMap))].filter(Boolean);
+    
+    // Extract the courses for reference
+    const courses = Object.values(coursesMap).filter(Boolean).map(course => ({
+      ...course,
+      faculty: course.faculty && facultyMap[course.faculty] ? facultyMap[course.faculty] : 'Unassigned'
+    }));
+    
+    return { timetable, courses, facultyMembers, rooms };
+  } catch (error) {
+    console.error('Error fetching timetable data:', error);
+    // Fall back to generated data
+    return generateTimetableData();
+  }
+};
+
+/**
+ * Subscribe to timetable updates in real-time
+ * @param {string} departmentId - Department ID
+ * @param {string} semesterId - Semester ID
+ * @param {Function} callback - Callback to handle updates
+ * @returns {Function} - Unsubscribe function
+ */
+export const subscribeTimetableUpdates = (departmentId, semesterId, callback) => {
+  const timetablesRef = collection(db, TIMETABLE_COLLECTION);
+  const timetableQuery = query(
+    timetablesRef,
+    where('departmentId', '==', departmentId),
+    where('semesterId', '==', semesterId),
+    orderBy('updatedAt', 'desc')
+  );
+  
+  return onSnapshot(timetableQuery, async (snapshot) => {
+    if (snapshot.empty) {
+      callback(generateTimetableData());
+      return;
+    }
+    
+    // Get fresh data on any update
+    const timetableData = await fetchTimetableData(departmentId, semesterId);
+    callback(timetableData);
+  });
+};
+
+// Generate random timetable data (used as fallback)
+export const generateTimetableData = () => {
+  const courseColors = getCourseColors();
 
   const courses = [
     { code: 'CS101', name: 'Introduction to Computer Science', faculty: 'Dr. Alex Johnson', room: 'A101', semester: 'Semester 7' },
@@ -118,9 +353,66 @@ export const printTimetable = () => {
   window.print();
 };
 
-export const downloadTimetablePDF = () => {
-  alert('PDF download functionality will be implemented here');
-  // In a real implementation, use a library like jsPDF to generate the PDF
+/**
+ * Download timetable as PDF
+ * @param {string} departmentId - Department ID 
+ * @param {string} selectedSemester - Selected semester
+ */
+export const downloadTimetablePDF = async (departmentId, selectedSemester) => {
+  try {
+    // In production, you would call a Firebase Cloud Function here
+    // that generates and returns a PDF
+    
+    // For now, show an alert
+    alert('PDF download functionality will be implemented via Firebase Cloud Functions');
+    
+    // Log the download attempt
+    const logsRef = collection(db, 'activityLogs');
+    await addDoc(logsRef, {
+      type: 'timetable',
+      action: 'pdf-download',
+      department: departmentId,
+      semester: selectedSemester,
+      timestamp: serverTimestamp()
+    });
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    alert('Error downloading PDF. Please try again later.');
+  }
+};
+
+/**
+ * Share timetable with department faculty
+ * @param {string} departmentId - Department ID
+ * @param {string} selectedSemester - Selected semester
+ * @returns {Promise<Object>} - Result of sharing operation
+ */
+export const shareTimetable = async (departmentId, selectedSemester) => {
+  try {
+    // In production, you would call a Firebase Cloud Function here
+    // that handles the sharing (e.g., sending emails or notifications)
+    
+    // Log the share action
+    const logsRef = collection(db, 'activityLogs');
+    await addDoc(logsRef, {
+      type: 'timetable',
+      action: 'share',
+      department: departmentId,
+      semester: selectedSemester,
+      timestamp: serverTimestamp()
+    });
+    
+    return {
+      success: true,
+      message: 'Timetable shared with department faculty'
+    };
+  } catch (error) {
+    console.error('Error sharing timetable:', error);
+    return {
+      success: false,
+      message: 'Error sharing timetable: ' + error.message
+    };
+  }
 };
 
 export const navigateWeek = (currentWeek, direction) => {

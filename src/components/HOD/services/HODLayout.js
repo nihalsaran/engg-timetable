@@ -2,22 +2,61 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { logoutUser } from '../../Auth/services/Login';
 import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar } from 'react-icons/fi';
+import { db, collection, query, getDocs, where } from '../../../firebase/config.js';
 
 export const useHODLayout = (user, setUser) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
   const [semesterDropdownOpen, setSemesterDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [selectedSemester, setSelectedSemester] = useState('Semester 7');
+  const [selectedSemester, setSelectedSemester] = useState('');
+  const [availableSemesters, setAvailableSemesters] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   
-  // List of available semesters
-  const availableSemesters = [
-    'Semester 7',
-    'Semester 6',
-    'Semester 5',
-    'Semester 4'
-  ];
+  // Load semesters from Firebase
+  useEffect(() => {
+    const loadSemesters = async () => {
+      try {
+        setLoading(true);
+        
+        // First try to get from Firebase
+        const semesterRef = collection(db, 'semesters');
+        const semesterSnapshot = await getDocs(semesterRef);
+        
+        if (!semesterSnapshot.empty) {
+          const semesters = semesterSnapshot.docs.map(doc => doc.data().name);
+          setAvailableSemesters(semesters);
+          setSelectedSemester(semesters[0] || '');
+        } else {
+          // Fallback to default semesters if none found in database
+          const defaultSemesters = [
+            'Semester 7',
+            'Semester 6',
+            'Semester 5',
+            'Semester 4'
+          ];
+          setAvailableSemesters(defaultSemesters);
+          setSelectedSemester(defaultSemesters[0]);
+        }
+      } catch (error) {
+        console.error('Error loading semesters:', error);
+        // Fallback to defaults on error
+        const defaultSemesters = [
+          'Semester 7',
+          'Semester 6',
+          'Semester 5',
+          'Semester 4'
+        ];
+        setAvailableSemesters(defaultSemesters);
+        setSelectedSemester(defaultSemesters[0]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadSemesters();
+  }, []);
   
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -89,6 +128,9 @@ export const useHODLayout = (user, setUser) => {
   const selectSemester = (semester) => {
     setSelectedSemester(semester);
     setSemesterDropdownOpen(false);
+    
+    // Store selected semester in local storage to persist across page refreshes
+    localStorage.setItem('selectedSemester', semester);
   };
 
   return {
@@ -98,6 +140,7 @@ export const useHODLayout = (user, setUser) => {
     selectedSemester,
     availableSemesters,
     sidebarItems,
+    loading,
     handleNavigation,
     handleLogout,
     toggleSemesterDropdown,

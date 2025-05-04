@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiBell, FiSearch, FiChevronDown, FiUsers, FiBook, FiCalendar } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { getSidebarItems, getDashboardMetrics, getRecentActivities, handleSidebarNavigation } from './services/HODDashboard';
@@ -7,10 +7,41 @@ export default function HODDashboard() {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
   const navigate = useNavigate();
   
+  // State for metrics and activities
+  const [metrics, setMetrics] = useState({
+    faculty: { total: 0, newThisWeek: 0 },
+    courses: { total: 0, pendingApproval: 0 },
+    timetable: { status: 'Loading...', completionPercentage: 0 }
+  });
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   // Get data from services
   const sidebarItems = getSidebarItems();
-  const metrics = getDashboardMetrics();
-  const recentActivities = getRecentActivities();
+  
+  // Use a fixed departmentId for now - in a real app, this would come from context/user authentication
+  const departmentId = "CS001";  // Computer Science department ID
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        // Fetch metrics
+        const metricsData = await getDashboardMetrics(departmentId);
+        setMetrics(metricsData);
+        
+        // Fetch activities
+        const activitiesData = await getRecentActivities(departmentId);
+        setRecentActivities(activitiesData);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDashboardData();
+  }, [departmentId]);
 
   const handleNavigation = (path, label) => {
     handleSidebarNavigation(navigate, path, label, setActiveSidebarItem);
@@ -71,20 +102,26 @@ export default function HODDashboard() {
           <div className="bg-white p-6 rounded-2xl shadow-md">
             <h2 className="text-xl font-semibold mb-6 text-gray-800">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <button className="px-6 py-4 rounded-xl bg-gradient-to-r from-teal-500 to-teal-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group">
+              <button 
+                onClick={() => navigate('/hod/assign-faculty')}
+                className="px-6 py-4 rounded-xl bg-gradient-to-r from-teal-500 to-teal-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group"
+              >
                 <span className="text-2xl group-hover:scale-110 transition">📘</span>
                 <span>Assign Faculty</span>
               </button>
 
               <button
-                onClick={() => navigate('/timetable')}
+                onClick={() => navigate('/hod/timetable')}
                 className="px-6 py-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group"
               >
                 <span className="text-2xl group-hover:scale-110 transition">🗂</span>
                 <span>View Timetable</span>
               </button>
 
-              <button className="px-6 py-4 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group">
+              <button 
+                onClick={() => navigate('/hod/courses')}
+                className="px-6 py-4 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-700 text-white font-semibold hover:opacity-90 transition shadow-lg flex items-center justify-center gap-3 group"
+              >
                 <span className="text-2xl group-hover:scale-110 transition">➕</span>
                 <span>Add Course</span>
               </button>
@@ -97,17 +134,26 @@ export default function HODDashboard() {
               <h2 className="text-xl font-semibold text-gray-800">Recent Activity</h2>
               <button className="text-sm text-teal-600 hover:underline">View All</button>
             </div>
-            <div className="space-y-4">
-              {recentActivities.map((activity, idx) => (
-                <div key={idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition">
-                  <div className={`w-2 h-2 rounded-full ${activity.colorClass}`}></div>
-                  <div className="flex-1">
-                    <p className="text-gray-800">{activity.description}</p>
-                    <p className="text-xs text-gray-500">{activity.timeAgo}</p>
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentActivities.map((activity, idx) => (
+                  <div key={idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition">
+                    <div className={`w-2 h-2 rounded-full ${activity.colorClass}`}></div>
+                    <div className="flex-1">
+                      <p className="text-gray-800">{activity.description}</p>
+                      <p className="text-xs text-gray-500">{activity.timeAgo}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+                {recentActivities.length === 0 && (
+                  <p className="text-center text-gray-500 py-4">No recent activities found.</p>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>

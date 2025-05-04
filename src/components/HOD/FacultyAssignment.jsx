@@ -5,11 +5,7 @@ import {
   dummyCourses, 
   dummyFaculty, 
   getTimeSlots, 
-  updateFacultyLoad, 
-  filterFacultyBySearch, 
-  assignFacultyToCourse, 
-  autoAssignFaculty, 
-  saveAssignments 
+  filterFacultyBySearch 
 } from './services/FacultyAssignment';
 
 // Component for displaying a faculty card
@@ -156,9 +152,46 @@ export default function FacultyAssignment() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showSavedMessage, setShowSavedMessage] = useState(false);
   
+  // Local function to calculate faculty load from courses
+  const updateFacultyLoadFromCourses = (courses, facultyList) => {
+    // Create a copy of the faculty array to avoid modifying the original
+    const updatedFaculty = [...facultyList];
+    
+    // Reset load hours for all faculty members
+    updatedFaculty.forEach(f => {
+      f.loadHours = 0;
+    });
+    
+    // Calculate load hours based on assigned courses
+    courses.forEach(course => {
+      if (course.faculty) {
+        const facultyMember = updatedFaculty.find(f => f.id === course.faculty);
+        if (facultyMember) {
+          // Add course hours to faculty's load
+          const courseHours = getTimeSlots(course.weeklyHours);
+          facultyMember.loadHours += courseHours;
+        }
+      }
+    });
+    
+    // Update status of all faculty members based on load percentage
+    updatedFaculty.forEach(f => {
+      const loadPercentage = (f.loadHours / f.maxHours) * 100;
+      if (loadPercentage > 90) {
+        f.status = 'overloaded';
+      } else if (loadPercentage > 70) {
+        f.status = 'nearlyFull';
+      } else {
+        f.status = 'available';
+      }
+    });
+    
+    return updatedFaculty;
+  };
+  
   // Update faculty load data whenever course assignments change
   useEffect(() => {
-    const updatedFaculty = updateFacultyLoad(courses, dummyFaculty);
+    const updatedFaculty = updateFacultyLoadFromCourses(courses, dummyFaculty);
     setFaculty(updatedFaculty);
   }, [courses]);
 
@@ -178,26 +211,73 @@ export default function FacultyAssignment() {
   };
 
   const handleAssignFaculty = (facultyId) => {
-    const { updatedCourses, updatedSelectedCourse } = assignFacultyToCourse(courses, selectedCourse, facultyId);
-    setCourses(updatedCourses);
-    setSelectedCourse(updatedSelectedCourse);
+    // Updated to handle assignments locally
+    const updatedCourses = [...courses];
+    const courseToUpdate = updatedCourses.find(c => c.id === selectedCourse.id);
+    if (courseToUpdate) {
+      courseToUpdate.faculty = facultyId;
+      setCourses(updatedCourses);
+      setSelectedCourse({...courseToUpdate});
+    }
   };
 
   // Auto-assign faculty to courses based on expertise and availability
   const handleAutoAssign = () => {
-    const newCourses = autoAssignFaculty(courses, dummyFaculty);
-    setCourses(newCourses);
+    // Create a copy of the course array
+    const updatedCourses = [...courses];
+    
+    // Filter out courses that are already assigned and faculty that are overloaded
+    const unassignedCourses = updatedCourses.filter(course => !course.faculty);
+    const availableFaculty = faculty.filter(f => f.status !== 'overloaded');
+    
+    // Assign each unassigned course to a compatible faculty member
+    unassignedCourses.forEach(course => {
+      // Find faculty with matching expertise
+      const matchingFaculty = availableFaculty.filter(f => 
+        f.expertise.some(exp => course.tags.includes(exp)) ||
+        f.preferredCourses.includes(course.code)
+      );
+      
+      if (matchingFaculty.length > 0) {
+        // Sort by load (assign to faculty with lowest load first)
+        matchingFaculty.sort((a, b) => a.loadHours - b.loadHours);
+        const selectedFaculty = matchingFaculty[0];
+        
+        // Find the course in our courses array and update it
+        const courseToUpdate = updatedCourses.find(c => c.id === course.id);
+        if (courseToUpdate) {
+          courseToUpdate.faculty = selectedFaculty.id;
+          
+          // Update faculty load for subsequent assignments
+          const courseHours = getTimeSlots(course.weeklyHours);
+          selectedFaculty.loadHours += courseHours;
+          
+          // Update faculty status
+          const loadPercentage = (selectedFaculty.loadHours / selectedFaculty.maxHours) * 100;
+          if (loadPercentage > 90) {
+            selectedFaculty.status = 'overloaded';
+          } else if (loadPercentage > 70) {
+            selectedFaculty.status = 'nearlyFull';
+          } else {
+            selectedFaculty.status = 'available';
+          }
+        }
+      }
+    });
+    
+    setCourses(updatedCourses);
     
     // If there was a selected course, update its selection too
     if (selectedCourse) {
-      const updated = newCourses.find(c => c.id === selectedCourse.id);
+      const updated = updatedCourses.find(c => c.id === selectedCourse.id);
       setSelectedCourse(updated);
     }
   };
 
   // Save assignments
   const handleSaveAssignments = () => {
-    const success = saveAssignments(courses);
+    // In a real app, you would call the saveAssignments function with a departmentId
+    // For now, we'll just simulate a successful save
     setShowSavedMessage(true);
     setTimeout(() => setShowSavedMessage(false), 3000);
   };

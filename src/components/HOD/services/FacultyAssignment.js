@@ -1,4 +1,27 @@
-// Mock data for courses
+// Faculty Assignment service using Firebase
+import { 
+  db, 
+  collection, 
+  doc,
+  getDoc, 
+  getDocs, 
+  addDoc,
+  updateDoc,
+  query,
+  where, 
+  orderBy, 
+  limit,
+  serverTimestamp,
+  arrayUnion,
+  arrayRemove
+} from '../../../firebase/config.js';
+import { logActivity } from './HODDashboard';
+
+// Collection references
+const FACULTY_COLLECTION = 'faculty';
+const COURSES_COLLECTION = 'courses';
+
+// Keeping dummy data for fallback
 export const dummyCourses = [
   { id: 1, code: 'CS101', title: 'Introduction to Computer Science', semester: 'Semester 6', weeklyHours: '3L+1T', faculty: null, tags: ['programming', 'introductory'] },
   { id: 2, code: 'CS202', title: 'Data Structures and Algorithms', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: null, tags: ['algorithms', 'data structures'] },
@@ -8,7 +31,6 @@ export const dummyCourses = [
   { id: 6, code: 'CS210', title: 'Computer Networks', semester: 'Semester 7', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['networking', 'protocols'] },
 ];
 
-// Mock data for faculty
 export const dummyFaculty = [
   { 
     id: 1, 
@@ -82,12 +104,97 @@ export const dummyFaculty = [
   },
 ];
 
-// Helper function to calculate weekly hours as a number
-export const calculateHoursFromString = (hoursString) => {
-  // Extract numbers from strings like "3L+1T+2P"
-  const lectureMatch = hoursString.match(/(\d+)L/);
-  const tutorialMatch = hoursString.match(/(\d+)T/);
-  const practicalMatch = hoursString.match(/(\d+)P/);
+/**
+ * Fetch courses from Firebase with optional semester filter
+ * @param {string} departmentId - Department ID
+ * @param {string} semester - Optional semester filter
+ * @returns {Promise<Array>} - Array of courses
+ */
+export const fetchCourses = async (departmentId, semester = null) => {
+  try {
+    const coursesRef = collection(db, COURSES_COLLECTION);
+    let coursesQuery;
+    
+    if (semester) {
+      coursesQuery = query(
+        coursesRef, 
+        where('department', '==', departmentId),
+        where('semester', '==', semester)
+      );
+    } else {
+      coursesQuery = query(coursesRef, where('department', '==', departmentId));
+    }
+    
+    const snapshot = await getDocs(coursesQuery);
+    
+    if (snapshot.empty) {
+      console.log('No courses found, using dummy data');
+      return dummyCourses;
+    }
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        code: data.code || '',
+        title: data.title || '',
+        semester: data.semester || '',
+        weeklyHours: data.weeklyHours || '',
+        faculty: data.faculty || null,
+        tags: data.tags || []
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    return dummyCourses;
+  }
+};
+
+/**
+ * Fetch faculty from Firebase
+ * @param {string} departmentId - Department ID
+ * @returns {Promise<Array>} - Array of faculty members
+ */
+export const fetchFaculty = async (departmentId) => {
+  try {
+    const facultyRef = collection(db, FACULTY_COLLECTION);
+    const facultyQuery = query(facultyRef, where('department', '==', departmentId));
+    
+    const snapshot = await getDocs(facultyQuery);
+    
+    if (snapshot.empty) {
+      console.log('No faculty found, using dummy data');
+      return dummyFaculty;
+    }
+    
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name || '',
+        avatar: data.avatar || 'https://i.pravatar.cc/150?img=11',
+        status: data.status || 'available',
+        loadHours: data.loadHours || 0,
+        maxHours: data.maxHours || 18,
+        expertise: data.expertise || [],
+        preferredCourses: data.preferredCourses || []
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching faculty:', error);
+    return dummyFaculty;
+  }
+};
+
+/**
+ * Calculate time slots from weekly hours string
+ * @param {string} weeklyHours - String representing weekly hours (e.g., "3L+1T+2P")
+ * @returns {number} - Total hours
+ */
+export const getTimeSlots = (weeklyHours) => {
+  const lectureMatch = weeklyHours.match(/(\d+)L/);
+  const tutorialMatch = weeklyHours.match(/(\d+)T/);
+  const practicalMatch = weeklyHours.match(/(\d+)P/);
   
   const lectureHours = lectureMatch ? parseInt(lectureMatch[1]) : 0;
   const tutorialHours = tutorialMatch ? parseInt(tutorialMatch[1]) : 0;
@@ -96,135 +203,306 @@ export const calculateHoursFromString = (hoursString) => {
   return lectureHours + tutorialHours + practicalHours;
 };
 
-// Helper to convert course hours to time slots needed
-export const getTimeSlots = (weeklyHours) => {
-  return calculateHoursFromString(weeklyHours);
+/**
+ * Update faculty load hours in Firebase
+ * @param {string} facultyId - Faculty ID to update
+ * @param {number} hoursChange - Change in load hours (positive or negative)
+ * @returns {Promise<Object>} - Updated faculty data
+ */
+export const updateFacultyLoad = async (facultyId, hoursChange) => {
+  try {
+    // Get current faculty data
+    const facultyRef = doc(db, FACULTY_COLLECTION, facultyId);
+    const facultySnapshot = await getDoc(facultyRef);
+    
+    if (!facultySnapshot.exists()) {
+      throw new Error(`Faculty with ID ${facultyId} not found`);
+    }
+    
+    const facultyData = facultySnapshot.data();
+    const currentLoadHours = facultyData.loadHours || 0;
+    const maxHours = facultyData.maxHours || 18;
+    
+    // Calculate new load hours
+    const newLoadHours = Math.max(0, currentLoadHours + hoursChange);
+    
+    // Determine new status based on load percentage
+    const loadPercentage = (newLoadHours / maxHours) * 100;
+    let newStatus = 'available';
+    
+    if (loadPercentage > 90) {
+      newStatus = 'overloaded';
+    } else if (loadPercentage > 70) {
+      newStatus = 'nearlyFull';
+    }
+    
+    // Update faculty document
+    await updateDoc(facultyRef, {
+      loadHours: newLoadHours,
+      status: newStatus,
+      updatedAt: serverTimestamp()
+    });
+    
+    return {
+      id: facultyId,
+      loadHours: newLoadHours,
+      status: newStatus,
+      loadPercentage
+    };
+  } catch (error) {
+    console.error('Error updating faculty load:', error);
+    throw error;
+  }
 };
 
-// Update faculty load based on course assignments
-export const updateFacultyLoad = (coursesData, facultyData) => {
-  // Reset faculty load to base values first
-  const updatedFaculty = [...facultyData].map(f => ({
-    ...f,
-    loadHours: f.loadHours
-  }));
+/**
+ * Filter faculty members by search query
+ * @param {Array} faculty - Array of faculty members
+ * @param {string} searchQuery - Search query
+ * @returns {Array} - Filtered faculty members
+ */
+export const filterFacultyBySearch = (faculty, searchQuery) => {
+  if (!searchQuery || searchQuery.trim() === '') {
+    return faculty;
+  }
   
-  // Add hours from course assignments
-  coursesData.forEach(course => {
-    if (course.faculty) {
-      const facultyIndex = updatedFaculty.findIndex(f => f.id === course.faculty);
-      if (facultyIndex !== -1) {
-        const courseHours = getTimeSlots(course.weeklyHours);
-        updatedFaculty[facultyIndex].loadHours += courseHours;
+  const query = searchQuery.toLowerCase();
+  return faculty.filter(f => 
+    f.name.toLowerCase().includes(query) || 
+    f.expertise.some(e => e.toLowerCase().includes(query))
+  );
+};
+
+/**
+ * Assign a faculty member to a course in Firebase
+ * @param {string} departmentId - Department ID
+ * @param {string} courseId - Course ID
+ * @param {string} facultyId - Faculty ID
+ * @returns {Promise<Object>} - Result of the assignment
+ */
+export const assignFacultyToCourse = async (departmentId, courseId, facultyId) => {
+  try {
+    // Get course data
+    const courseRef = doc(db, COURSES_COLLECTION, courseId);
+    const courseSnapshot = await getDoc(courseRef);
+    
+    if (!courseSnapshot.exists()) {
+      throw new Error(`Course with ID ${courseId} not found`);
+    }
+    
+    const courseData = courseSnapshot.data();
+    const previousFacultyId = courseData.faculty;
+    
+    // If the course already has the same faculty assigned, do nothing
+    if (previousFacultyId === facultyId) {
+      return { success: true, course: { id: courseId, ...courseData } };
+    }
+    
+    // If another faculty was previously assigned, update their load
+    if (previousFacultyId) {
+      // Remove course from previous faculty's assigned courses
+      const prevFacultyRef = doc(db, FACULTY_COLLECTION, previousFacultyId);
+      await updateDoc(prevFacultyRef, {
+        assignedCourses: arrayRemove(courseId)
+      });
+      
+      // Update previous faculty's load hours
+      const hoursChange = -getTimeSlots(courseData.weeklyHours);
+      await updateFacultyLoad(previousFacultyId, hoursChange);
+    }
+    
+    // Update course with new faculty
+    await updateDoc(courseRef, {
+      faculty: facultyId,
+      updatedAt: serverTimestamp()
+    });
+    
+    // Add course to faculty's assigned courses
+    const facultyRef = doc(db, FACULTY_COLLECTION, facultyId);
+    await updateDoc(facultyRef, {
+      assignedCourses: arrayUnion(courseId)
+    });
+    
+    // Update new faculty's load hours
+    const hoursChange = getTimeSlots(courseData.weeklyHours);
+    await updateFacultyLoad(facultyId, hoursChange);
+    
+    // Log the activity
+    await logActivity(
+      departmentId, 
+      'faculty', 
+      `Faculty ${facultyId} assigned to course ${courseData.code}`
+    );
+    
+    return { 
+      success: true, 
+      message: 'Faculty assigned successfully',
+      courseId,
+      facultyId
+    };
+  } catch (error) {
+    console.error('Error assigning faculty to course:', error);
+    return {
+      success: false,
+      message: 'Error assigning faculty: ' + error.message
+    };
+  }
+};
+
+/**
+ * Automatically assign faculty to courses based on expertise match
+ * @param {string} departmentId - Department ID 
+ * @param {Array} courses - Array of courses
+ * @param {Array} faculty - Array of faculty members
+ * @returns {Promise<Object>} - Result of auto-assignment
+ */
+export const autoAssignFaculty = async (departmentId, courses, faculty) => {
+  try {
+    // Filter out courses that are already assigned
+    const unassignedCourses = courses.filter(course => !course.faculty);
+    
+    // Skip if there are no unassigned courses
+    if (unassignedCourses.length === 0) {
+      return {
+        success: true,
+        message: 'All courses are already assigned',
+        assignedCount: 0
+      };
+    }
+    
+    // Filter out overloaded faculty
+    const availableFaculty = faculty.filter(f => f.status !== 'overloaded');
+    
+    // Skip if there are no available faculty
+    if (availableFaculty.length === 0) {
+      return {
+        success: false,
+        message: 'No available faculty for assignment',
+        assignedCount: 0
+      };
+    }
+    
+    let assignedCount = 0;
+    
+    // Process each unassigned course
+    for (const course of unassignedCourses) {
+      // Find faculty with expertise in the course's tags
+      const matchingFaculty = availableFaculty.filter(f => 
+        f.expertise.some(exp => course.tags.includes(exp)) ||
+        f.preferredCourses.includes(course.code)
+      );
+      
+      if (matchingFaculty.length === 0) {
+        continue; // Skip if no matching faculty
+      }
+      
+      // Sort matching faculty by current load (ascending)
+      matchingFaculty.sort((a, b) => a.loadHours - b.loadHours);
+      
+      // Assign the course to the faculty with the lowest load
+      const selectedFaculty = matchingFaculty[0];
+      
+      // Make the assignment
+      const result = await assignFacultyToCourse(
+        departmentId,
+        course.id, 
+        selectedFaculty.id
+      );
+      
+      if (result.success) {
+        assignedCount++;
         
-        // Update status based on new load
-        const loadPercentage = (updatedFaculty[facultyIndex].loadHours / updatedFaculty[facultyIndex].maxHours) * 100;
-        if (loadPercentage > 90) {
-          updatedFaculty[facultyIndex].status = 'overloaded';
-        } else if (loadPercentage > 70) {
-          updatedFaculty[facultyIndex].status = 'nearlyFull';
-        } else {
-          updatedFaculty[facultyIndex].status = 'available';
+        // Update the faculty's load for subsequent assignments
+        const foundFaculty = availableFaculty.find(f => f.id === selectedFaculty.id);
+        if (foundFaculty) {
+          const courseHours = getTimeSlots(course.weeklyHours);
+          foundFaculty.loadHours += courseHours;
+          
+          // Update faculty status if needed
+          const loadPercentage = (foundFaculty.loadHours / foundFaculty.maxHours) * 100;
+          if (loadPercentage > 90) {
+            foundFaculty.status = 'overloaded';
+          } else if (loadPercentage > 70) {
+            foundFaculty.status = 'nearlyFull';
+          }
         }
       }
     }
-  });
-  
-  return updatedFaculty;
-};
-
-// Filter faculty based on search term
-export const filterFacultyBySearch = (facultyData, searchTerm) => {
-  if (!searchTerm.trim()) {
-    return [...facultyData];
-  }
-  
-  const term = searchTerm.toLowerCase();
-  return facultyData.filter(f => 
-    f.name.toLowerCase().includes(term) || 
-    f.expertise.some(e => e.toLowerCase().includes(term))
-  );
-};
-
-// Assign a faculty to a course
-export const assignFacultyToCourse = (courses, selectedCourse, facultyId) => {
-  // If the faculty is already assigned to this course, unassign them
-  if (selectedCourse.faculty === facultyId) {
-    const updatedCourses = courses.map(c => 
-      c.id === selectedCourse.id ? { ...c, faculty: null } : c
+    
+    // Log the activity
+    await logActivity(
+      departmentId, 
+      'faculty', 
+      `Auto-assigned ${assignedCount} courses to faculty`
     );
-    const updatedSelectedCourse = { ...selectedCourse, faculty: null };
-    return { updatedCourses, updatedSelectedCourse };
+    
+    return {
+      success: true,
+      message: `Successfully assigned ${assignedCount} out of ${unassignedCourses.length} courses`,
+      assignedCount
+    };
+  } catch (error) {
+    console.error('Error auto-assigning faculty:', error);
+    return {
+      success: false,
+      message: 'Error during auto-assignment: ' + error.message,
+      assignedCount: 0
+    };
   }
-  
-  // Otherwise, assign the faculty to the course
-  const updatedCourses = courses.map(c => 
-    c.id === selectedCourse.id ? { ...c, faculty: facultyId } : c
-  );
-  const updatedSelectedCourse = { ...selectedCourse, faculty: facultyId };
-  
-  return { updatedCourses, updatedSelectedCourse };
 };
 
-// Auto-assign faculty to courses based on expertise and availability
-export const autoAssignFaculty = (courses, facultyData) => {
-  const newCourses = [...courses];
-  
-  // Reset all faculty loadHours to their base values
-  const tempFaculty = [...facultyData].map(f => ({
-    ...f,
-    loadHours: f.loadHours,
-    status: 'available'
-  }));
-  
-  // Process each course for assignment
-  newCourses.forEach((course, index) => {
-    // Skip already assigned courses
-    if (course.faculty) return;
+/**
+ * Save faculty assignments to Firebase
+ * @param {string} departmentId - Department ID
+ * @returns {Promise<Object>} - Result of the save operation
+ */
+export const saveAssignments = async (departmentId) => {
+  try {
+    // Create a snapshot record of current assignments
+    const assignmentHistoryRef = collection(db, 'assignmentHistory');
     
-    // Find compatible faculty sorted by preference and availability
-    const compatibleFaculty = tempFaculty
-      .filter(f => 
-        f.expertise.some(exp => course.tags.includes(exp)) ||
-        f.preferredCourses.includes(course.code)
-      )
-      .sort((a, b) => {
-        // Sort by preference first
-        const aPreferred = a.preferredCourses.includes(course.code);
-        const bPreferred = b.preferredCourses.includes(course.code);
-        if (aPreferred && !bPreferred) return -1;
-        if (!aPreferred && bPreferred) return 1;
-        
-        // Then sort by load
-        return (a.loadHours / a.maxHours) - (b.loadHours / b.maxHours);
-      });
+    // Get current assignments
+    const coursesRef = collection(db, COURSES_COLLECTION);
+    const coursesQuery = query(coursesRef, where('department', '==', departmentId));
+    const coursesSnapshot = await getDocs(coursesQuery);
     
-    // Assign to the first available faculty
-    if (compatibleFaculty.length > 0) {
-      const assignedFaculty = compatibleFaculty[0];
-      newCourses[index].faculty = assignedFaculty.id;
-      
-      // Update faculty load
-      const courseHours = getTimeSlots(course.weeklyHours);
-      const facultyIndex = tempFaculty.findIndex(f => f.id === assignedFaculty.id);
-      tempFaculty[facultyIndex].loadHours += courseHours;
-      
-      // Update status
-      const loadPercentage = (tempFaculty[facultyIndex].loadHours / tempFaculty[facultyIndex].maxHours) * 100;
-      if (loadPercentage > 90) {
-        tempFaculty[facultyIndex].status = 'overloaded';
-      } else if (loadPercentage > 70) {
-        tempFaculty[facultyIndex].status = 'nearlyFull';
+    const assignments = [];
+    coursesSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.faculty) {
+        assignments.push({
+          courseId: doc.id,
+          courseCode: data.code,
+          facultyId: data.faculty
+        });
       }
-    }
-  });
-  
-  return newCourses;
-};
-
-// Save assignments to backend (currently just logs to console)
-export const saveAssignments = (courses) => {
-  console.log('Saving faculty assignments:', courses);
-  // This would typically include an API call
-  return true;
+    });
+    
+    // Save the assignment record
+    await addDoc(assignmentHistoryRef, {
+      departmentId,
+      timestamp: serverTimestamp(),
+      assignments,
+      totalAssigned: assignments.length
+    });
+    
+    // Log the activity
+    await logActivity(
+      departmentId, 
+      'faculty', 
+      `Faculty assignments saved`
+    );
+    
+    return {
+      success: true,
+      message: `Successfully saved ${assignments.length} faculty assignments`,
+      assignmentCount: assignments.length
+    };
+  } catch (error) {
+    console.error('Error saving assignments:', error);
+    return {
+      success: false,
+      message: 'Error saving assignments: ' + error.message
+    };
+  }
 };
