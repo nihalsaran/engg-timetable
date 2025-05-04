@@ -358,6 +358,130 @@ export const searchTeachers = async (searchTerm) => {
   }
 };
 
+/**
+ * Get example JSON dataset format
+ * @returns {Object} Example dataset
+ */
+export const getExampleJSONDataset = () => {
+  return {
+    "teachers": [
+      {
+        "name": "Dr. John Smith",
+        "email": "john.smith@university.edu",
+        "department": "Computer Science",
+        "expertise": ["Artificial Intelligence", "Machine Learning"],
+        "qualification": "Ph.D Computer Science",
+        "experience": 10,
+        "active": true
+      },
+      {
+        "name": "Prof. Maria Garcia",
+        "email": "maria.garcia@university.edu",
+        "department": "Electrical Engineering",
+        "expertise": ["Embedded Systems", "Computer Networks"],
+        "qualification": "Ph.D Electrical Engineering",
+        "experience": 8,
+        "active": true
+      }
+    ]
+  };
+};
+
+/**
+ * Process faculty data import from JSON
+ * @param {Object} jsonData - Imported JSON data
+ * @returns {Object} Import results
+ */
+export const processFacultyImport = async (jsonData) => {
+  try {
+    // Handle both "teachers" and "faculty" root keys
+    const teacherArray = jsonData.teachers || jsonData.faculty;
+    
+    if (!teacherArray || !Array.isArray(teacherArray)) {
+      return { success: false, error: "Invalid JSON format. Expected 'teachers' or 'faculty' array." };
+    }
+    
+    const results = [];
+    const departmentMap = {
+      "Mechanical": "Mechanical Engineering",
+      "Electrical": "Electrical Engineering",
+      "Civil": "Civil Engineering",
+      "Agricultural": "Agricultural Engineering",
+      "Footwear": "Footwear Technology",
+      // Add more mappings as needed
+    };
+    
+    for (const teacherData of teacherArray) {
+      try {
+        // Validate required fields
+        if (!teacherData.name) {
+          results.push({
+            name: teacherData.name || 'Unknown',
+            success: false,
+            error: "Missing name field"
+          });
+          continue;
+        }
+        
+        // Map department names if needed
+        let department = teacherData.department || '';
+        if (departmentMap[department]) {
+          department = departmentMap[department];
+        }
+        
+        // Generate a random password for the new teacher
+        const password = generateSecurePassword();
+        
+        // Generate a default email if not provided
+        const email = teacherData.email || 
+          `${teacherData.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}@university.edu`;
+        
+        // Add teacher using the existing create function
+        const result = await createTeacher({
+          name: teacherData.name,
+          email: email,
+          password: password,
+          department: department,
+          expertise: Array.isArray(teacherData.expertise) ? teacherData.expertise : [],
+          qualification: teacherData.qualification || '',
+          experience: teacherData.experience || 0,
+          active: teacherData.active !== false
+        });
+        
+        if (result.success) {
+          results.push({
+            name: teacherData.name,
+            success: true
+          });
+        } else {
+          results.push({
+            name: teacherData.name,
+            success: false,
+            error: result.error
+          });
+        }
+      } catch (err) {
+        results.push({
+          name: teacherData.name || 'Unknown',
+          success: false,
+          error: err.message
+        });
+      }
+    }
+    
+    return {
+      success: true,
+      results
+    };
+  } catch (error) {
+    console.error("Error processing faculty import:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
 // Helper function to generate a secure password
 const generateSecurePassword = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
@@ -408,6 +532,8 @@ const TeacherManagementService = {
   deleteTeacher,
   getTeacherById,
   searchTeachers,
+  getExampleJSONDataset,
+  processFacultyImport,
   getInitials,
   getAvatarBg,
   subjectAreas,

@@ -3,6 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { logoutUser } from '../../Auth/services/Login';
 import { FiGrid, FiBook, FiUsers, FiFileText, FiCalendar } from 'react-icons/fi';
 import { db, collection, query, getDocs, where } from '../../../firebase/config.js';
+import { 
+  getActiveSemester, 
+  getAllSemesters, 
+  getDefaultSemesters,
+  storeSelectedSemester,
+  getSelectedSemesterFromStorage 
+} from '../../../services/SemesterService.js';
 
 export const useHODLayout = (user, setUser) => {
   const [activeSidebarItem, setActiveSidebarItem] = useState('Dashboard');
@@ -14,42 +21,52 @@ export const useHODLayout = (user, setUser) => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Load semesters from Firebase
+  // Load semesters from centralized service
   useEffect(() => {
     const loadSemesters = async () => {
       try {
         setLoading(true);
         
-        // First try to get from Firebase
-        const semesterRef = collection(db, 'semesters');
-        const semesterSnapshot = await getDocs(semesterRef);
+        // Check if we have a previously selected semester in localStorage
+        const storedSemester = getSelectedSemesterFromStorage();
         
-        if (!semesterSnapshot.empty) {
-          const semesters = semesterSnapshot.docs.map(doc => doc.data().name);
-          setAvailableSemesters(semesters);
-          setSelectedSemester(semesters[0] || '');
+        // Get all semesters from Firebase
+        const semestersData = await getAllSemesters();
+        
+        if (semestersData.length > 0) {
+          // Extract semester names from data
+          const semesterNames = semestersData.map(sem => sem.name);
+          setAvailableSemesters(semesterNames);
+          
+          // Try to use the stored semester if it exists and is valid
+          if (storedSemester && semesterNames.includes(storedSemester)) {
+            setSelectedSemester(storedSemester);
+          } else {
+            // Otherwise use the active semester
+            const activeSem = semestersData.find(sem => sem.status === 'active');
+            if (activeSem) {
+              setSelectedSemester(activeSem.name);
+              storeSelectedSemester(activeSem.name);
+            } else {
+              // Fallback to the first semester in the list
+              setSelectedSemester(semesterNames[0]);
+              storeSelectedSemester(semesterNames[0]);
+            }
+          }
         } else {
           // Fallback to default semesters if none found in database
-          const defaultSemesters = [
-            'Semester 7',
-            'Semester 6',
-            'Semester 5',
-            'Semester 4'
-          ];
+          const defaultSemesters = getDefaultSemesters();
           setAvailableSemesters(defaultSemesters);
           setSelectedSemester(defaultSemesters[0]);
+          storeSelectedSemester(defaultSemesters[0]);
         }
       } catch (error) {
         console.error('Error loading semesters:', error);
         // Fallback to defaults on error
-        const defaultSemesters = [
-          'Semester 7',
-          'Semester 6',
-          'Semester 5',
-          'Semester 4'
-        ];
+        const defaultSemesters = getDefaultSemesters();
         setAvailableSemesters(defaultSemesters);
         setSelectedSemester(defaultSemesters[0]);
+        storeSelectedSemester(defaultSemesters[0]);
       } finally {
         setLoading(false);
       }
@@ -130,7 +147,7 @@ export const useHODLayout = (user, setUser) => {
     setSemesterDropdownOpen(false);
     
     // Store selected semester in local storage to persist across page refreshes
-    localStorage.setItem('selectedSemester', semester);
+    storeSelectedSemester(semester);
   };
 
   return {

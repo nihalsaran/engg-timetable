@@ -12,9 +12,15 @@ import {
   query,
   where, 
   orderBy, 
-  serverTimestamp
+  serverTimestamp,
+  arrayUnion,
+  arrayRemove
 } from '../../../firebase/config.js';
 import { logActivity } from './HODDashboard';
+import { 
+  getCurrentSemesterPeriod,
+  getSemesterNumbersForPeriod 
+} from '../../../services/SemesterService';
 
 // Collection references
 const COURSES_COLLECTION = 'courses';
@@ -192,11 +198,18 @@ export const getFaculty = () => {
 };
 
 /**
- * Get semester options (to be replaced with Firebase data)
+ * Get semester options based on the current period (odd/even)
  * @returns {Array} - Array of semester options
  */
 export const getSemesterOptions = () => {
-  return ['All Semesters', 'Fall 2024', 'Spring 2025'];
+  const currentPeriod = getCurrentSemesterPeriod();
+  const semesterNumbers = getSemesterNumbersForPeriod(currentPeriod);
+  
+  // Generate semester names like "Semester 1", "Semester 3", etc.
+  const semesterOptions = semesterNumbers.map(num => `Semester ${num}`);
+  
+  // Always include "All Semesters" as first option
+  return ['All Semesters', ...semesterOptions];
 };
 
 /**

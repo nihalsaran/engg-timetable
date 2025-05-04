@@ -164,7 +164,7 @@ const Login = () => {
                 transition={{ duration: 0.5 }}
               >
                 <h2 className="text-center text-3xl font-extrabold text-white mb-8">
-                  University Timetable System
+                  DEI Timetable System
                 </h2>
               </motion.div>
 

@@ -588,10 +588,17 @@ export default function CourseManagement() {
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   >
-                    <option value="Semester 6">Semester 6</option>
-                    <option value="Semester 7">Semester 7</option>
-                    <option value="Semester 8">Semester 8</option>
+                    {/* Filter out "All Semesters" from the options */}
+                    {semesterOptions.filter(option => option !== 'All Semesters').map((semester) => (
+                      <option key={semester} value={semester}>{semester}</option>
+                    ))}
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.semester?.includes('1') || formData.semester?.includes('3') || 
+                     formData.semester?.includes('5') || formData.semester?.includes('7') 
+                      ? 'Odd semester (July - December)' 
+                      : 'Even semester (January - May)'}
+                  </p>
                 </div>
                 
                 {/* Faculty Assignment */}
