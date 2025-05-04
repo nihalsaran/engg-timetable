@@ -1,10 +1,5 @@
 // TeacherManagement.js - Firebase Integration
 import { 
-  auth, 
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail
-} from '../../../firebase/config.js';
-import { 
   db, 
   collection, 
   doc, 
@@ -21,7 +16,6 @@ import {
 
 // Collection names
 const TEACHERS_COLLECTION = 'teachers';
-const PROFILES_COLLECTION = 'profiles';
 
 // Subject areas that teachers can specialize in
 export const subjectAreas = [
@@ -98,24 +92,19 @@ export const fetchTeachers = async () => {
 };
 
 /**
- * Create a new teacher using Firebase for auth and data storage
+ * Create a new teacher record in Firestore (without creating an auth account)
  * @param {Object} teacherData - The teacher data to create
  * @returns {Promise} Promise object with result
  */
 export const createTeacher = async (teacherData) => {
   try {
-    // Generate a random initial password
-    const initialPassword = generateSecurePassword();
-    
-    // Create user account in Firebase Auth
-    const { name, email } = teacherData;
-    const userCredential = await createUserWithEmailAndPassword(auth, email, initialPassword);
-    const userId = userCredential.user.uid;
+    // Generate a unique ID for the teacher
+    const teacherId = crypto.randomUUID();
     
     // Create teacher document in Firestore
-    const teacherRef = doc(db, TEACHERS_COLLECTION, userId);
+    const teacherRef = doc(db, TEACHERS_COLLECTION, teacherId);
     const facultyData = {
-      userId,
+      teacherId,
       name: teacherData.name,
       email: teacherData.email,
       department: teacherData.department,
@@ -131,30 +120,10 @@ export const createTeacher = async (teacherData) => {
     
     await setDoc(teacherRef, facultyData);
     
-    // Create a basic user profile document
-    await setDoc(doc(db, PROFILES_COLLECTION, userId), {
-      userId,
-      name: teacherData.name,
-      email: teacherData.email,
-      role: 'Faculty',
-      department: teacherData.department,
-      active: teacherData.active !== false,
-      createdAt: new Date().toISOString()
-    });
-    
-    // Send password reset email so the faculty can set their own password
-    try {
-      await sendPasswordResetEmail(auth, email, {
-        url: window.location.origin + '/login'
-      });
-    } catch (recoveryError) {
-      console.warn('Could not send password reset email:', recoveryError);
-    }
-    
     return {
       success: true,
       faculty: {
-        id: userId,
+        id: teacherId,
         ...facultyData
       },
       error: null
@@ -162,10 +131,7 @@ export const createTeacher = async (teacherData) => {
   } catch (error) {
     console.error('Error creating teacher in Firebase:', error);
     
-    let errorMessage = 'Failed to create faculty account';
-    if (error.code === 'auth/email-already-in-use') {
-      errorMessage = 'A user with this email already exists';
-    }
+    let errorMessage = 'Failed to create faculty record';
     
     return {
       success: false,
@@ -204,21 +170,7 @@ export const updateTeacher = async (teacherData) => {
     
     await updateDoc(teacherRef, updateData);
     
-    // If the teacher record has a userId, update the corresponding profile document
     const existingData = teacherDocSnap.data();
-    if (existingData.userId) {
-      const profileRef = doc(db, PROFILES_COLLECTION, existingData.userId);
-      const profileSnap = await getDoc(profileRef);
-      
-      if (profileSnap.exists()) {
-        await updateDoc(profileRef, {
-          name: teacherData.name,
-          department: teacherData.department,
-          active: teacherData.active !== false,
-          updatedAt: new Date().toISOString()
-        });
-      }
-    }
     
     return {
       success: true,
@@ -246,7 +198,7 @@ export const updateTeacher = async (teacherData) => {
  */
 export const deleteTeacher = async (teacherId) => {
   try {
-    // Get the teacher document to check for userId
+    // Get the teacher document
     const teacherRef = doc(db, TEACHERS_COLLECTION, teacherId);
     const teacherSnap = await getDoc(teacherRef);
     
@@ -254,24 +206,8 @@ export const deleteTeacher = async (teacherId) => {
       throw new Error('Teacher not found');
     }
     
-    const teacherData = teacherSnap.data();
-    
     // Delete the teacher document
     await deleteDoc(teacherRef);
-    
-    // If there's a userId, delete the profile document and try to delete the Auth user
-    if (teacherData.userId) {
-      // Delete profile document
-      const profileRef = doc(db, PROFILES_COLLECTION, teacherData.userId);
-      const profileSnap = await getDoc(profileRef);
-      
-      if (profileSnap.exists()) {
-        await deleteDoc(profileRef);
-      }
-      
-      // Note: Deleting the Firebase Auth user requires the Admin SDK in a Cloud Function
-      // This would be implemented server-side in production
-    }
     
     return {
       success: true,
@@ -429,9 +365,6 @@ export const processFacultyImport = async (jsonData) => {
           department = departmentMap[department];
         }
         
-        // Generate a random password for the new teacher
-        const password = generateSecurePassword();
-        
         // Generate a default email if not provided
         const email = teacherData.email || 
           `${teacherData.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}@university.edu`;
@@ -440,7 +373,6 @@ export const processFacultyImport = async (jsonData) => {
         const result = await createTeacher({
           name: teacherData.name,
           email: email,
-          password: password,
           department: department,
           expertise: Array.isArray(teacherData.expertise) ? teacherData.expertise : [],
           qualification: teacherData.qualification || '',
@@ -480,16 +412,6 @@ export const processFacultyImport = async (jsonData) => {
       error: error.message
     };
   }
-};
-
-// Helper function to generate a secure password
-const generateSecurePassword = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
-  let password = '';
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
 };
 
 /**
