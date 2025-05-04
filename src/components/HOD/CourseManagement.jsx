@@ -1,76 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiEdit, FiTrash2, FiSearch, FiFilter, FiX, FiBook, FiUser, FiClock, FiCalendar, FiHash, FiUpload, FiInfo, FiDownload } from 'react-icons/fi';
-
-// Dummy data for courses
-const dummyCourses = [
-  { 
-    id: 1, 
-    code: 'CS101', 
-    title: 'Introduction to Computer Science', 
-    faculty: { id: 1, name: 'Dr. Alex Johnson', avatar: 'https://via.placeholder.com/36', status: 'available' }, 
-    semester: 'Fall 2024', 
-    weeklyHours: '3L+1T' 
-  },
-  { 
-    id: 2, 
-    code: 'CS202', 
-    title: 'Data Structures and Algorithms', 
-    faculty: { id: 2, name: 'Dr. Sarah Miller', avatar: 'https://via.placeholder.com/36', status: 'busy' }, 
-    semester: 'Spring 2025', 
-    weeklyHours: '3L+2P' 
-  },
-  { 
-    id: 3, 
-    code: 'CS303', 
-    title: 'Database Systems', 
-    faculty: { id: 3, name: 'Prof. Robert Chen', avatar: 'https://via.placeholder.com/36', status: 'available' }, 
-    semester: 'Fall 2024', 
-    weeklyHours: '3L+1T+2P' 
-  },
-  { 
-    id: 4, 
-    code: 'CS405', 
-    title: 'Artificial Intelligence', 
-    faculty: { id: 4, name: 'Dr. Emily Zhang', avatar: 'https://via.placeholder.com/36', status: 'available' }, 
-    semester: 'Spring 2025', 
-    weeklyHours: '4L+2P' 
-  },
-  { 
-    id: 5, 
-    code: 'CS301', 
-    title: 'Software Engineering', 
-    faculty: { id: 5, name: 'Prof. David Wilson', avatar: 'https://via.placeholder.com/36', status: 'on-leave' }, 
-    semester: 'Fall 2024', 
-    weeklyHours: '3L+1T' 
-  },
-  { 
-    id: 6, 
-    code: 'CS210', 
-    title: 'Computer Networks', 
-    faculty: null, 
-    semester: 'Spring 2025', 
-    weeklyHours: '3L+1T+1P' 
-  },
-];
-
-// Dummy data for faculty
-const dummyFaculty = [
-  { id: 1, name: 'Dr. Alex Johnson', avatar: 'https://via.placeholder.com/36', status: 'available' },
-  { id: 2, name: 'Dr. Sarah Miller', avatar: 'https://via.placeholder.com/36', status: 'busy' },
-  { id: 3, name: 'Prof. Robert Chen', avatar: 'https://via.placeholder.com/36', status: 'available' },
-  { id: 4, name: 'Dr. Emily Zhang', avatar: 'https://via.placeholder.com/36', status: 'available' },
-  { id: 5, name: 'Prof. David Wilson', avatar: 'https://via.placeholder.com/36', status: 'on-leave' },
-  { id: 6, name: 'Dr. Lisa Kumar', avatar: 'https://via.placeholder.com/36', status: 'available' },
-  { id: 7, name: 'Prof. Michael Brown', avatar: 'https://via.placeholder.com/36', status: 'busy' },
-];
-
-// Semester options
-const semesterOptions = ['All Semesters', 'Semester 6', 'Semester 7', 'Semester 8'];
+import CourseManagementService from './services/CourseManagement';
 
 export default function CourseManagement() {
   // State variables
-  const [courses, setCourses] = useState(dummyCourses);
-  const [filteredCourses, setFilteredCourses] = useState(courses);
+  const [courses, setCourses] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [faculty, setFaculty] = useState([]);
+  const [semesterOptions, setSemesterOptions] = useState([]);
   const [selectedSemester, setSelectedSemester] = useState('All Semesters');
   const [selectedFaculty, setSelectedFaculty] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,6 +29,18 @@ export default function CourseManagement() {
   const fileInputRef = useRef(null);
   const tooltipRef = useRef(null);
 
+  // Load initial data
+  useEffect(() => {
+    setCourses(CourseManagementService.getCourses());
+    setFaculty(CourseManagementService.getFaculty());
+    setSemesterOptions(CourseManagementService.getSemesterOptions());
+  }, []);
+
+  // Initial filtered courses setup
+  useEffect(() => {
+    setFilteredCourses(courses);
+  }, [courses]);
+
   // Handle click outside for tooltip
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -112,29 +61,12 @@ export default function CourseManagement() {
 
   // Filter courses whenever filter parameters change
   useEffect(() => {
-    let filtered = [...courses];
-    
-    // Apply semester filter
-    if (selectedSemester !== 'All Semesters') {
-      filtered = filtered.filter(course => course.semester === selectedSemester);
-    }
-    
-    // Apply faculty filter
-    if (selectedFaculty) {
-      filtered = filtered.filter(course => 
-        course.faculty && course.faculty.id === selectedFaculty.id
-      );
-    }
-    
-    // Apply search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(course => 
-        course.code.toLowerCase().includes(term) || 
-        course.title.toLowerCase().includes(term)
-      );
-    }
-    
+    const filtered = CourseManagementService.filterCourses(
+      courses,
+      searchTerm,
+      selectedSemester,
+      selectedFaculty
+    );
     setFilteredCourses(filtered);
   }, [courses, selectedSemester, selectedFaculty, searchTerm]);
 
@@ -147,12 +79,11 @@ export default function CourseManagement() {
   // Format weekly hours when lecture, tutorial, or practical hours change
   useEffect(() => {
     const { lectureHours, tutorialHours, practicalHours } = formData;
-    
-    let weeklyHours = '';
-    if (lectureHours && parseInt(lectureHours) > 0) weeklyHours += `${lectureHours}L`;
-    if (tutorialHours && parseInt(tutorialHours) > 0) weeklyHours += `+${tutorialHours}T`;
-    if (practicalHours && parseInt(practicalHours) > 0) weeklyHours += `+${practicalHours}P`;
-    
+    const weeklyHours = CourseManagementService.formatWeeklyHours(
+      lectureHours,
+      tutorialHours,
+      practicalHours
+    );
     setFormData(prev => ({ ...prev, weeklyHours }));
   }, [formData.lectureHours, formData.tutorialHours, formData.practicalHours]);
 
@@ -176,19 +107,8 @@ export default function CourseManagement() {
   const openEditCourseModal = (course) => {
     setEditingCourse(course);
     
-    // Parse weekly hours into components (3L+1T+2P)
-    let lectureHours = '0', tutorialHours = '0', practicalHours = '0';
-    
-    if (course.weeklyHours) {
-      const matches = course.weeklyHours.match(/(\d+)L|(\d+)T|(\d+)P/g);
-      if (matches) {
-        matches.forEach(match => {
-          if (match.includes('L')) lectureHours = match.replace('L', '');
-          if (match.includes('T')) tutorialHours = match.replace('T', '');
-          if (match.includes('P')) practicalHours = match.replace('P', '');
-        });
-      }
-    }
+    // Parse weekly hours into components
+    const { lectureHours, tutorialHours, practicalHours } = CourseManagementService.parseWeeklyHours(course.weeklyHours);
     
     setFormData({
       title: course.title,
@@ -207,35 +127,23 @@ export default function CourseManagement() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Get selected faculty object
-    const facultyObj = formData.faculty ? 
-      dummyFaculty.find(f => f.id === parseInt(formData.faculty)) : null;
-    
     if (editingCourse) {
       // Update existing course
-      const updatedCourses = courses.map(course => 
-        course.id === editingCourse.id ? 
-        {
-          ...course,
-          title: formData.title,
-          code: formData.code,
-          faculty: facultyObj,
-          semester: formData.semester,
-          weeklyHours: formData.weeklyHours
-        } : course
+      const updatedCourses = CourseManagementService.updateCourse(
+        courses,
+        editingCourse.id,
+        formData,
+        faculty
       );
       setCourses(updatedCourses);
     } else {
       // Add new course
-      const newCourse = {
-        id: courses.length + 1,
-        title: formData.title,
-        code: formData.code,
-        faculty: facultyObj,
-        semester: formData.semester,
-        weeklyHours: formData.weeklyHours
-      };
-      setCourses([...courses, newCourse]);
+      const updatedCourses = CourseManagementService.addCourse(
+        courses,
+        formData,
+        faculty
+      );
+      setCourses(updatedCourses);
     }
     
     setShowModal(false);
@@ -243,7 +151,7 @@ export default function CourseManagement() {
 
   // Delete a course
   const handleDeleteCourse = (id) => {
-    const updatedCourses = courses.filter(course => course.id !== id);
+    const updatedCourses = CourseManagementService.deleteCourse(courses, id);
     setCourses(updatedCourses);
   };
 
@@ -275,59 +183,15 @@ export default function CourseManagement() {
         try {
           const jsonData = JSON.parse(event.target.result);
           
-          // Validate the JSON structure
-          if (!Array.isArray(jsonData)) {
-            throw new Error('Invalid JSON format. Expected an array of courses.');
-          }
-          
-          // Process each course in the dataset
-          const results = [];
-          const newCourses = [...courses];
-          
-          for (const course of jsonData) {
-            // Basic validation
-            if (!course.title || !course.code || !course.semester) {
-              results.push({
-                code: course.code || 'Unknown',
-                success: false,
-                error: 'Missing required fields (title, code, or semester)'
-              });
-              continue;
-            }
-            
-            try {
-              // Find faculty if specified
-              let facultyObj = null;
-              if (course.faculty) {
-                facultyObj = dummyFaculty.find(f => f.id === course.faculty || f.name === course.faculty);
-              }
-              
-              // Create new course object
-              const newCourse = {
-                id: newCourses.length + 1,
-                title: course.title,
-                code: course.code,
-                semester: course.semester,
-                weeklyHours: course.weeklyHours || '3L',
-                faculty: facultyObj
-              };
-              
-              newCourses.push(newCourse);
-              results.push({
-                code: course.code,
-                success: true
-              });
-            } catch (err) {
-              results.push({
-                code: course.code || 'Unknown',
-                success: false,
-                error: err.message
-              });
-            }
-          }
+          // Process the uploaded courses
+          const { results, updatedCourses } = CourseManagementService.processUploadedCourses(
+            jsonData,
+            courses,
+            faculty
+          );
           
           // Update courses state
-          setCourses(newCourses);
+          setCourses(updatedCourses);
           
           // Show results summary
           const successful = results.filter(r => r.success).length;
@@ -364,29 +228,7 @@ export default function CourseManagement() {
 
   // Download example JSON dataset
   const downloadExampleJSON = () => {
-    const exampleData = [
-      {
-        "title": "Introduction to Programming",
-        "code": "CS100",
-        "semester": "Fall 2024",
-        "weeklyHours": "3L+1T",
-        "faculty": 1
-      },
-      {
-        "title": "Web Development",
-        "code": "CS220",
-        "semester": "Spring 2025",
-        "weeklyHours": "3L+2P",
-        "faculty": 3
-      },
-      {
-        "title": "Mobile App Development",
-        "code": "CS320",
-        "semester": "Fall 2024",
-        "weeklyHours": "2L+3P",
-        "faculty": null
-      }
-    ];
+    const exampleData = CourseManagementService.getExampleCourseData();
     
     const blob = new Blob([JSON.stringify(exampleData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -428,13 +270,13 @@ export default function CourseManagement() {
                 value={selectedFaculty ? selectedFaculty.id : ''}
                 onChange={(e) => {
                   const facultyId = e.target.value;
-                  setSelectedFaculty(facultyId ? dummyFaculty.find(f => f.id === parseInt(facultyId)) : null);
+                  setSelectedFaculty(facultyId ? faculty.find(f => f.id === parseInt(facultyId)) : null);
                 }}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               >
                 <option value="">All Faculty</option>
-                {dummyFaculty.map((faculty) => (
-                  <option key={faculty.id} value={faculty.id}>{faculty.name}</option>
+                {faculty.map((facultyMember) => (
+                  <option key={facultyMember.id} value={facultyMember.id}>{facultyMember.name}</option>
                 ))}
               </select>
             </div>
@@ -765,9 +607,9 @@ export default function CourseManagement() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   >
                     <option value="">-- Not Assigned --</option>
-                    {dummyFaculty.map((faculty) => (
-                      <option key={faculty.id} value={faculty.id}>
-                        {faculty.name} ({faculty.status === 'available' ? '🟢' : faculty.status === 'busy' ? '🟡' : '🔴'})
+                    {faculty.map((facultyMember) => (
+                      <option key={facultyMember.id} value={facultyMember.id}>
+                        {facultyMember.name} ({facultyMember.status === 'available' ? '🟢' : facultyMember.status === 'busy' ? '🟡' : '🔴'})
                       </option>
                     ))}
                   </select>
@@ -777,23 +619,23 @@ export default function CourseManagement() {
                 <div>
                   <label className="block text-xs text-gray-500 mb-2">Quick Select:</label>
                   <div className="flex flex-wrap gap-2">
-                    {dummyFaculty.map((faculty) => (
+                    {faculty.map((facultyMember) => (
                       <button
                         type="button"
-                        key={faculty.id}
-                        onClick={() => setFormData(prev => ({ ...prev, faculty: faculty.id.toString() }))}
+                        key={facultyMember.id}
+                        onClick={() => setFormData(prev => ({ ...prev, faculty: facultyMember.id.toString() }))}
                         className={`relative p-1 border-2 rounded-full transition ${
-                          parseInt(formData.faculty) === faculty.id 
+                          parseInt(formData.faculty) === facultyMember.id 
                           ? 'border-teal-500 shadow-md' 
                           : 'border-transparent hover:border-gray-300'
                         }`}
-                        title={faculty.name}
+                        title={facultyMember.name}
                       >
-                        <img src={faculty.avatar} alt={faculty.name} className="w-10 h-10 rounded-full" />
+                        <img src={facultyMember.avatar} alt={facultyMember.name} className="w-10 h-10 rounded-full" />
                         <span 
                           className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-                            faculty.status === 'available' ? 'bg-green-500' : 
-                            faculty.status === 'busy' ? 'bg-yellow-500' : 
+                            facultyMember.status === 'available' ? 'bg-green-500' : 
+                            facultyMember.status === 'busy' ? 'bg-yellow-500' : 
                             'bg-red-500'
                           }`}
                         ></span>

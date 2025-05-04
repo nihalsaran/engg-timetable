@@ -6,120 +6,18 @@ import {
   FiSearch, FiUser, FiClock, FiBook
 } from 'react-icons/fi';
 
-// Mock data for faculty and courses
-// Using similar data structure as in FacultyAssignment.jsx
-const dummySemesters = ['Semester 7', 'Semester 6', 'Semester 5', 'Semester 4'];
-
-const dummyCourses = [
-  { id: 1, code: 'CS101', title: 'Introduction to Computer Science', semester: 'Semester 6', weeklyHours: '3L+1T', faculty: 1, tags: ['programming', 'introductory'] },
-  { id: 2, code: 'CS202', title: 'Data Structures and Algorithms', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: 1, tags: ['algorithms', 'data structures'] },
-  { id: 3, code: 'CS303', title: 'Database Systems', semester: 'Semester 6', weeklyHours: '3L+1T+2P', faculty: 7, tags: ['databases', 'SQL'] },
-  { id: 4, code: 'CS405', title: 'Artificial Intelligence', semester: 'Semester 7', weeklyHours: '4L+2P', faculty: 4, tags: ['AI', 'machine learning'] },
-  { id: 5, code: 'CS301', title: 'Software Engineering', semester: 'Semester 6', weeklyHours: '3L+1T', faculty: 3, tags: ['software', 'project management'] },
-  { id: 6, code: 'CS210', title: 'Computer Networks', semester: 'Semester 7', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['networking', 'protocols'] },
-  { id: 7, code: 'CS450', title: 'Cloud Computing', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: 7, tags: ['cloud', 'distributed systems'] },
-  { id: 8, code: 'CS320', title: 'Web Development', semester: 'Semester 6', weeklyHours: '2L+3P', faculty: 6, tags: ['web', 'javascript', 'html'] },
-  { id: 9, code: 'CS410', title: 'Machine Learning', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: 4, tags: ['ML', 'statistics'] },
-  { id: 10, code: 'CS250', title: 'Computer Architecture', semester: 'Semester 6', weeklyHours: '4L+1T', faculty: 2, tags: ['hardware', 'systems'] },
-  { id: 11, code: 'CS350', title: 'Operating Systems', semester: 'Semester 7', weeklyHours: '3L+2P', faculty: 2, tags: ['OS', 'systems'] },
-  { id: 12, code: 'CS430', title: 'Cybersecurity', semester: 'Semester 6', weeklyHours: '3L+1T+1P', faculty: 5, tags: ['security', 'cryptography'] },
-  { id: 13, code: 'CS222', title: 'Advanced Programming', semester: 'Semester 7', weeklyHours: '2L+3P', faculty: 6, tags: ['programming', 'advanced'] },
-  { id: 14, code: 'CS401', title: 'Project Management', semester: 'Semester 6', weeklyHours: '2L+2T', faculty: 3, tags: ['project management', 'software'] },
-];
-
-const dummyFaculty = [
-  { 
-    id: 1, 
-    name: 'Dr. Alex Johnson', 
-    avatar: 'https://i.pravatar.cc/150?img=11', 
-    department: 'Computer Science',
-    status: 'available', 
-    loadHours: 9,
-    maxHours: 18,
-    expertise: ['programming', 'algorithms', 'theory'],
-    assignedCourses: [1, 2]
-  },
-  { 
-    id: 2, 
-    name: 'Dr. Sarah Miller', 
-    avatar: 'https://i.pravatar.cc/150?img=5', 
-    department: 'Computer Science',
-    status: 'nearlyFull', 
-    loadHours: 15,
-    maxHours: 18,
-    expertise: ['databases', 'data mining', 'systems'],
-    assignedCourses: [10, 11]
-  },
-  { 
-    id: 3, 
-    name: 'Prof. Robert Chen', 
-    avatar: 'https://i.pravatar.cc/150?img=12', 
-    department: 'Computer Science',
-    status: 'available', 
-    loadHours: 10,
-    maxHours: 20,
-    expertise: ['software engineering', 'project management'],
-    assignedCourses: [5, 14]
-  },
-  { 
-    id: 4, 
-    name: 'Dr. Emily Zhang', 
-    avatar: 'https://i.pravatar.cc/150?img=9', 
-    department: 'Computer Science',
-    status: 'nearlyFull', 
-    loadHours: 15,
-    maxHours: 18,
-    expertise: ['AI', 'machine learning', 'neural networks'],
-    assignedCourses: [4, 9]
-  },
-  { 
-    id: 5, 
-    name: 'Prof. David Wilson', 
-    avatar: 'https://i.pravatar.cc/150?img=15',
-    department: 'Computer Science', 
-    status: 'overloaded', 
-    loadHours: 21,
-    maxHours: 20,
-    expertise: ['networking', 'security', 'protocols'],
-    assignedCourses: [6, 12]
-  },
-  { 
-    id: 6, 
-    name: 'Dr. Lisa Kumar', 
-    avatar: 'https://i.pravatar.cc/150?img=3',
-    department: 'Computer Science', 
-    status: 'available', 
-    loadHours: 12,
-    maxHours: 18,
-    expertise: ['theory', 'algorithms', 'computational logic'],
-    assignedCourses: [8, 13]
-  },
-  { 
-    id: 7, 
-    name: 'Prof. Michael Brown', 
-    avatar: 'https://i.pravatar.cc/150?img=13',
-    department: 'Computer Science', 
-    status: 'nearlyFull', 
-    loadHours: 15,
-    maxHours: 18,
-    expertise: ['databases', 'cloud', 'data warehousing'],
-    assignedCourses: [3, 7]
-  },
-];
-
-// Helper function to calculate weekly hours as a number
-const calculateHoursFromString = (hoursString) => {
-  // Extract numbers from strings like "3L+1T+2P"
-  const lectureMatch = hoursString.match(/(\d+)L/);
-  const tutorialMatch = hoursString.match(/(\d+)T/);
-  const practicalMatch = hoursString.match(/(\d+)P/);
-  
-  const lectureHours = lectureMatch ? parseInt(lectureMatch[1]) : 0;
-  const tutorialHours = tutorialMatch ? parseInt(tutorialMatch[1]) : 0;
-  const practicalHours = practicalMatch ? parseInt(practicalMatch[1]) : 0;
-  
-  return lectureHours + tutorialHours + practicalHours;
-};
+// Import service functions and data
+import { 
+  dummySemesters, 
+  dummyCourses,
+  dummyFaculty,
+  calculateHoursFromString,
+  getFacultyWithLoadData,
+  getFilteredFacultyData,
+  generateReport,
+  emailFacultyReport,
+  exportReportAs
+} from './services/FacultyLoadReports';
 
 // Main component for Faculty Load Reports
 export default function FacultyLoadReports() {
@@ -135,67 +33,6 @@ export default function FacultyLoadReports() {
   const [emailingFaculty, setEmailingFaculty] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
-  // Calculate the faculty load data with course information
-  const getFacultyWithLoadData = () => {
-    // Filter courses based on selected semester
-    const semesterCourses = courses.filter(course => course.semester === selectedSemester);
-    
-    // Enhance faculty data with detailed course information
-    const enhancedFacultyData = faculty.map(f => {
-      // Get courses assigned to this faculty member for the selected semester
-      const facultyCourses = semesterCourses.filter(course => f.assignedCourses.includes(course.id));
-      
-      // Calculate total load hours for this semester
-      const semesterLoadHours = facultyCourses.reduce((total, course) => 
-        total + calculateHoursFromString(course.weeklyHours), 0);
-      
-      // Determine faculty status based on load
-      const loadPercentage = (semesterLoadHours / f.maxHours) * 100;
-      let status = 'available';
-      if (loadPercentage > 90) {
-        status = 'overloaded';
-      } else if (loadPercentage > 70) {
-        status = 'nearlyFull';
-      }
-      
-      return {
-        ...f,
-        semesterLoadHours,
-        loadPercentage,
-        status,
-        facultyCourses
-      };
-    });
-    
-    return enhancedFacultyData;
-  };
-
-  // Get filtered faculty data
-  const getFilteredFacultyData = () => {
-    const enhancedData = getFacultyWithLoadData();
-    
-    let filtered = enhancedData;
-    
-    // Apply overloaded filter if selected
-    if (showOverloadedOnly) {
-      filtered = filtered.filter(f => f.status === 'overloaded');
-    }
-    
-    // Apply search filter if any
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(f => 
-        f.name.toLowerCase().includes(query) || 
-        f.facultyCourses.some(c => 
-          c.code.toLowerCase().includes(query) || 
-          c.title.toLowerCase().includes(query)
-        )
-      );
-    }
-    
-    return filtered;
-  };
-
   // Handle row expansion
   const toggleExpandRow = (facultyId) => {
     setExpandedFaculty(prev => ({
@@ -204,15 +41,20 @@ export default function FacultyLoadReports() {
     }));
   };
 
-  // Filtered faculty data
-  const filteredFacultyData = getFilteredFacultyData();
+  // Get filtered faculty data from service
+  const filteredFacultyData = getFilteredFacultyData(
+    faculty, 
+    courses, 
+    selectedSemester, 
+    showOverloadedOnly, 
+    searchQuery
+  );
 
   // Handle generating report
   const handleGenerateReport = () => {
     setGeneratingReport(true);
     
-    // Simulate report generation
-    setTimeout(() => {
+    generateReport().then(() => {
       setGeneratingReport(false);
       setReportGenerated(true);
       
@@ -220,15 +62,14 @@ export default function FacultyLoadReports() {
       setTimeout(() => {
         setReportGenerated(false);
       }, 3000);
-    }, 1500);
+    });
   };
 
   // Handle faculty email
   const handleEmailFaculty = () => {
     setEmailingFaculty(true);
     
-    // Simulate email sending
-    setTimeout(() => {
+    emailFacultyReport().then(() => {
       setEmailingFaculty(false);
       setEmailSent(true);
       
@@ -236,13 +77,14 @@ export default function FacultyLoadReports() {
       setTimeout(() => {
         setEmailSent(false);
       }, 3000);
-    }, 1500);
+    });
   };
 
   // Handle report export
   const handleExport = () => {
-    alert(`Exporting report in ${exportFormat} format`);
-    // Actual implementation would handle the export process
+    exportReportAs(exportFormat).then((result) => {
+      alert(result.message);
+    });
   };
 
   return (
