@@ -400,6 +400,18 @@ export const getAvatarBg = (name) => {
   return colors[hash % colors.length];
 };
 
+
+//example json data for faculty
+const getExampleJSONDataset = ()=>{
+  return {
+    "faculty":[
+      { id: 1, name: 'Dr. Jane Smith', email: 'jane@univ.edu', department: 'Computer Science', expertise: ['Algorithms & Data Structures', 'Artificial Intelligence'], qualification: 'Ph.D Computer Science', experience: 8, active: true },
+      { id: 2, name: 'Prof. Michael Johnson', email: 'michael@univ.edu', department: 'Electrical Engineering', expertise: ['Computer Networks', 'Embedded Systems'], qualification: 'Ph.D Electrical Engineering', experience: 12, active: true },
+      { id: 3, name: 'Dr. Sarah Williams', email: 'sarah@univ.edu', department: 'Computer Science', expertise: ['Database Systems', 'Web Development'], qualification: 'Ph.D Information Systems', experience: 6, active: false },
+    ]
+  }
+}
+
 // Export all functions as a service object
 const TeacherManagementService = {
   fetchTeachers,
@@ -412,7 +424,8 @@ const TeacherManagementService = {
   getAvatarBg,
   subjectAreas,
   departments,
-  dummyTeachers
+  dummyTeachers,
+  getExampleJSONDataset
 };
 
 export default TeacherManagementService;
