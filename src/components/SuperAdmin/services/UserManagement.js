@@ -2,7 +2,10 @@
 import { 
   auth, 
   createUserWithEmailAndPassword, 
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  signOut, // Import signOut function
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
 } from '../../../firebase/config.js';
 import { 
   db, 
@@ -127,6 +130,31 @@ const createTeacherForHOD = async (userData, userId) => {
  */
 export const createUser = async (userData) => {
   try {
+    // Store the current user's email to sign them back in later
+    let currentEmail = null;
+    let currentPassword = null;
+    
+    // Check if we're currently authenticated and store the email
+    await new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user) {
+          currentEmail = user.email;
+        }
+        unsubscribe();
+        resolve();
+      });
+    });
+    
+    if (!currentEmail) {
+      throw new Error('No authenticated user found. Please sign in again.');
+    }
+    
+    // Prompt for current admin password before proceeding
+    currentPassword = window.prompt('Please enter your password to confirm this action:');
+    if (!currentPassword) {
+      throw new Error('Password required to create new users.');
+    }
+
     // Generate a random initial password
     const initialPassword = generateSecurePassword();
     
@@ -165,6 +193,18 @@ export const createUser = async (userData) => {
       });
     } catch (recoveryError) {
       console.warn('Could not send password reset email:', recoveryError);
+    }
+    
+    // Sign out the newly created user
+    await signOut(auth);
+    
+    // Sign back in as the original admin user
+    try {
+      await signInWithEmailAndPassword(auth, currentEmail, currentPassword);
+    } catch (signInError) {
+      console.error('Error signing back in as admin:', signInError);
+      // At this point, the user needs to log back in manually
+      throw new Error('User created successfully, but you have been signed out. Please sign in again.');
     }
     
     return {
