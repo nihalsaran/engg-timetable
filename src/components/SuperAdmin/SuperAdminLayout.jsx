@@ -1,7 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiMenu, FiBell, FiSearch, FiUser, FiUsers, FiGrid, FiLayers, FiHome, FiFileText, FiSettings, FiBookOpen, FiLogOut, FiChevronDown, FiChevronUp } from 'react-icons/fi';
-import { logoutUser } from '../Auth/services/Login';
+import { auth, signOut, onAuthStateChanged } from '../../firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 const navItems = [
   { label: 'Dashboard', icon: <FiGrid />, path: '/admin/dashboard' },
@@ -16,15 +18,48 @@ const navItems = [
 export default function SuperAdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Check authentication state on component mount
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        // Get profile data to get the name
+        const userProfileRef = doc(db, 'profiles', currentUser.uid);
+        try {
+          const userProfileSnap = await getDoc(userProfileRef);
+          if (userProfileSnap.exists()) {
+            // Merge Firebase user with profile data
+            setUser({
+              ...currentUser,
+              name: userProfileSnap.data().name
+            });
+          } else {
+            setUser(currentUser);
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          setUser(currentUser);
+        }
+      } else {
+        // Redirect to login page if not authenticated
+        navigate('/login');
+      }
+      setLoading(false);
+    });
+    
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [navigate]);
   
   // Handle logout
   const handleLogout = async () => {
     try {
-      await logoutUser();
-      // Redirect to login page after successful logout
-      navigate('/login');
+      await signOut(auth);
+      // Navigate will happen automatically due to the onAuthStateChanged listener
     } catch (error) {
       console.error('Logout failed:', error);
       // Show error message to user
@@ -33,7 +68,7 @@ export default function SuperAdminLayout() {
   };
   
   // Close dropdown when clicking outside
-  useState(() => {
+  useEffect(() => {
     const closeDropdown = (e) => {
       if (!e.target.closest('.profile-dropdown')) {
         setProfileDropdownOpen(false);
@@ -43,6 +78,15 @@ export default function SuperAdminLayout() {
     document.addEventListener('mousedown', closeDropdown);
     return () => document.removeEventListener('mousedown', closeDropdown);
   }, []);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -87,8 +131,8 @@ export default function SuperAdminLayout() {
                 className="flex items-center gap-2"
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               >
-                <img src="https://via.placeholder.com/30" alt="avatar" className="rounded-full" />
-                <span className="hidden md:block">Profile</span>
+                <img src={user?.photoURL || "https://via.placeholder.com/30"} alt="avatar" className="rounded-full" />
+                <span className="hidden md:block">{user?.name || user?.displayName || 'Admin'}</span>
                 {profileDropdownOpen ? 
                   <FiChevronUp className="text-gray-500" /> : 
                   <FiChevronDown className="text-gray-500" />
@@ -98,8 +142,8 @@ export default function SuperAdminLayout() {
               {profileDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-20">
                   <div className="px-4 py-3 border-b">
-                    <p className="text-sm font-medium">Admin User</p>
-                    <p className="text-xs text-gray-500">admin@example.com</p>
+                    <p className="text-sm font-medium">{user?.name || user?.displayName || 'Admin User'}</p>
+                    <p className="text-xs text-gray-500">{user?.email}</p>
                   </div>
                   <div className="py-1">
                     <button

@@ -139,7 +139,10 @@ export default function TeacherManagement() {
         result = await TeacherManagementService.createTeacher(formData);
       } else {
         // Update existing teacher
-        result = await TeacherManagementService.updateTeacher(editingId, formData);
+        result = await TeacherManagementService.updateTeacher({
+          ...formData,
+          id: editingId
+        });
       }
       
       if (result.success) {

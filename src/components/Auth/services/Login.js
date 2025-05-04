@@ -43,7 +43,7 @@ export const loginUser = async (credentials) => {
     const userObject = {
       id: user.uid,
       email: user.email,
-      name: user.displayName || '',
+      name: userProfileSnap.exists() ? userProfileSnap.data().name : user.displayName || '',
       role: role,
       isAuthenticated: true
     };
@@ -128,7 +128,7 @@ export const getCurrentUser = async () => {
           const userObject = {
             id: user.uid,
             email: user.email,
-            name: user.displayName || '',
+            name: userProfileSnap.exists() ? userProfileSnap.data().name : user.displayName || '',
             role: role,
             isAuthenticated: true
           };
