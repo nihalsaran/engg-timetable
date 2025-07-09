@@ -12,6 +12,7 @@ import RoomManagement from './components/SuperAdmin/RoomManagement'
 import ReportsAnalytics from './components/SuperAdmin/ReportsAnalytics'
 import SettingsSemester from './components/SuperAdmin/SettingsSemester'
 import SuperAdminCourseManagement from './components/SuperAdmin/SuperAdminCourseManagement'
+import CollegeManagement from './components/SuperAdmin/CollegeManagement'
 import HODDashboard from './components/HOD/HODDashboard'
 import CourseManagement from './components/HOD/CourseManagement'
 import HODLayout from './components/HOD/HODLayout'
@@ -26,6 +27,8 @@ import Conflicts from './components/TTIncharge/Conflicts'
 import RoomAvailability from './components/TTIncharge/RoomAvailability'
 import FacultyTimetable from './components/TTIncharge/FacultyTimetable'
 import BatchManagement from './components/TTIncharge/BatchManagement'
+import RoomAvailabilityAllocation from './components/TTIncharge/RoomAvailabilityAllocation.jsx'
+import TeacherCodeAllocation from './components/TTIncharge/TeacherCodeAllocation.jsx'
 // Import authentication functions
 import { getCurrentUser, checkSession, initializeAuth } from './components/Auth/services/Login'
 // Import Firebase auth for auth state changes
@@ -177,6 +180,8 @@ function App() {
               <Route path="room-availability" element={<RoomAvailability />} />
               <Route path="faculty-timetable" element={<FacultyTimetable />} />
               <Route path="batch-management" element={<BatchManagement />} />
+              <Route path="room-availability-allocation" element={<RoomAvailabilityAllocation />} />
+              <Route path="teacher-code-allocation" element={<TeacherCodeAllocation />} />
             </Route>
 
             {/* SuperAdmin Routes with /admin/* path prefix */}
@@ -192,6 +197,7 @@ function App() {
               <Route path="users" element={<UserManagement />} />
               <Route path="faculty" element={<TeacherManagement />} />
               <Route path="courses" element={<SuperAdminCourseManagement />} />
+              <Route path="colleges" element={<CollegeManagement />} />
               <Route path="departments" element={<DepartmentManagement />} />
               <Route path="rooms" element={<RoomManagement />} />
               <Route path="reports" element={<ReportsAnalytics />} />

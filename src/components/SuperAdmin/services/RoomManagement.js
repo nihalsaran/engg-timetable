@@ -13,6 +13,7 @@ import {
   orderBy,
   generateId
 } from '../../../firebase/config';
+import { getCollegeColorClass, getActiveColleges } from '../../../services/CollegeService';
 
 // Collection name
 const ROOMS_COLLECTION = 'rooms';
@@ -25,9 +26,12 @@ const dummyRooms = [
 export const roomTypes = [
   'Classroom',
   'Lecture Hall',
-  'Computer Lab',
-  'Chemistry Lab',
-  'Physics Lab',
+  'Electronics Lab',
+  'Electrical Lab',
+  'Mechanical Lab',
+  'Civil Lab',
+  'Footwear Lab',
+  'Agriculture Lab',
   'Workshop',
   'Seminar Hall',
   'Conference Room'
@@ -35,12 +39,12 @@ export const roomTypes = [
 
 // Building options
 export const buildings = [
-  'CSE Block',
+  'EE Block',
   'Main Block',
-  'IT Block',
-  'Mechanical Block',
-  'Electronics Block',
-  'Civil Block',
+  'ME Block',
+  'CE Block',
+  'FE Block',
+  'AE Block',
   'Admin Block',
   'Library Building'
 ];
@@ -55,20 +59,14 @@ export const statusOptions = [
 
 // Faculty options for dropdown (renamed from departmentOptions)
 export const facultyOptions = [
-  'Faculty of Engineering',
-  'Faculty of Science',
-  'Faculty of Social Science',
-  'Faculty of Arts',
-  'Faculty of Management',
-  'Faculty of Law',
-  'Faculty of Medicine',
-  'Faculty of Education',
+  'Electrical Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Footwear Engineering',
+  'Agricultural Engineering',
   'Common Facilities',
-  'Technical College',
-  'Faculty of Architecture',
-  'Shatabdi Bhawan',
-  'School of Education',
-  'Department of English',
+  'Admin Block',
+  'Library',
   'General'
 ];
 
@@ -88,25 +86,8 @@ export const featureOptions = [
  * @returns {string} CSS class for color
  */
 export const getFacultyColorClass = (faculty) => {
-  const colorMap = {
-    'Faculty of Engineering': 'bg-blue-100 text-blue-800',
-    'Faculty of Science': 'bg-green-100 text-green-800',
-    'Faculty of Social Science': 'bg-orange-100 text-orange-800',
-    'Faculty of Arts': 'bg-purple-100 text-purple-800',
-    'Faculty of Management': 'bg-yellow-100 text-yellow-800',
-    'Faculty of Law': 'bg-indigo-100 text-indigo-800',
-    'Faculty of Medicine': 'bg-red-100 text-red-800',
-    'Faculty of Education': 'bg-teal-100 text-teal-800',
-    'Common Facilities': 'bg-gray-100 text-gray-800',
-    'Technical College': 'bg-pink-100 text-pink-800',
-    'Faculty of Architecture': 'bg-cyan-100 text-cyan-800',
-    'Shatabdi Bhawan': 'bg-lime-100 text-lime-800',
-    'School of Education': 'bg-amber-100 text-amber-800',
-    'Department of English': 'bg-violet-100 text-violet-800',
-    'General': 'bg-slate-100 text-slate-800'
-  };
-  
-  return colorMap[faculty] || 'bg-gray-100 text-gray-800';
+  // Use the shared college service for consistent colors
+  return getCollegeColorClass(faculty);
 };
 
 /**
@@ -205,8 +186,8 @@ export const getExampleJSONDataset = () => {
       {
         "roomNumber": "LAB305",
         "capacity": 30,
-        "features": ["Computers", "AC", "Wi-Fi", "Projector"],
-        "faculty": "Faculty of Engineering",
+        "features": ["Electronics Equipment", "AC", "Wi-Fi", "Projector"],
+        "faculty": "Electrical Engineering",
         "allowOtherFaculties": true,
         "freeTimings": {
           "monday": ["12:00-13:00", "13:00-14:00"],
@@ -221,7 +202,7 @@ export const getExampleJSONDataset = () => {
         "roomNumber": "AUD400",
         "capacity": 200,
         "features": ["Audio System", "Projector", "SmartBoard", "AC"],
-        "faculty": "Faculty of Arts",
+        "faculty": "Civil Engineering",
         "allowOtherFaculties": true,
         "freeTimings": {
           "monday": ["16:00-17:00", "17:00-18:00"],
@@ -251,14 +232,14 @@ export const getExampleJSONDataset = () => {
     "_metadata": {
       "description": "Room Management Dataset Example",
       "version": "1.0",
-      "availableFeatures": ["Projector", "SmartBoard", "Computers", "AC", "Wi-Fi", "Audio System"],
+      "availableFeatures": ["Projector", "SmartBoard", "Electronics Equipment", "Machinery", "AC", "Wi-Fi", "Audio System"],
       "availableFaculties": [
-        "Faculty of Engineering",
-        "Faculty of Science", 
-        "Faculty of Arts",
-        "Faculty of Business",
-        "Faculty of Medicine",
-        "Faculty of Law"
+        "Electrical Engineering",
+        "Mechanical Engineering", 
+        "Civil Engineering",
+        "Footwear Engineering",
+        "Agricultural Engineering",
+        "Common Facilities"
       ],
       "timeSlotFormat": "HH:MM-HH:MM (24-hour format)",
       "availableTimeSlots": [
@@ -755,6 +736,21 @@ export const generateRoomUtilizationReport = (rooms) => {
   };
 };
 
+/**
+ * Get available faculties/colleges for room assignment
+ * @returns {Promise<Array>} Array of faculty/college names
+ */
+export const getAvailableFaculties = async () => {
+  try {
+    const colleges = await getActiveColleges();
+    return colleges.map(college => college.name);
+  } catch (error) {
+    console.error('Error fetching available faculties:', error);
+    // Return empty array instead of fallback data
+    return [];
+  }
+};
+
 // Export all functions as a service object
 const RoomManagementService = {
   getRooms,
@@ -775,7 +771,20 @@ const RoomManagementService = {
   processSingleRoomImport,
   getAvailableRooms,
   getRoomAvailabilitySummary,
-  generateRoomUtilizationReport
+  generateRoomUtilizationReport,
+  getAvailableFaculties
 };
 
 export default RoomManagementService;
+
+// Additional named exports for direct import
+// export { 
+//   getRooms,
+//   getAllRooms,
+//   filterRooms,
+//   createRoom,
+//   addRoom,
+//   updateRoom,
+//   deleteRoom,
+//   getAvailableFaculties
+// };
